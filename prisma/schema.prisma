@@ -1,0 +1,14 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  nodeId    String
+  choice    String   // "left" | "right"
+  createdAt DateTime @default(now())
+}

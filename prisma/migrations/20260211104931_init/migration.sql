@@ -1,0 +1,7 @@
+-- CreateTable
+CREATE TABLE "Vote" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "nodeId" TEXT NOT NULL,
+    "choice" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
