@@ -113,16 +113,6 @@ export default function Home() {
           </button>
         </section>
 
-        {/* Bottom bar (clear affordance) */}
-        <footer style={s.bottom}>
-          <div style={s.hintRow}>
-            <span style={s.hintPill}>Swipe ← vote left</span>
-            <span style={s.hintPill}>Swipe → vote right</span>
-          </div>
-          <div style={s.subHint}>
-            Oder tippe direkt auf eine Seite. (Mobile-first, 3 Sekunden.)
-          </div>
-        </footer>
       </div>
     </main>
   );
