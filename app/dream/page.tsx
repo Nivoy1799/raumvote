@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import type { Option } from "@/lib/tree.types";
 import { fetchActiveTreeMeta, fetchOption } from "@/lib/tree.client";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShare, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { faShare } from "@fortawesome/free-solid-svg-icons";
 
 export default function DreamPage() {
   const router = useRouter();
@@ -72,7 +72,7 @@ export default function DreamPage() {
     const url = shareUrl || window.location.href;
 
     if (navigator.share) {
-      await navigator.share({ title: "Mein Dorfplatz-Traum", url });
+      await navigator.share({ title: "Mein RaumVote", url });
     } else {
       await navigator.clipboard.writeText(url);
       alert("Link copied");
@@ -82,11 +82,7 @@ export default function DreamPage() {
   return (
     <main style={s.shell}>
       <header style={s.header}>
-        <button style={s.backBtn} onClick={() => router.back()} aria-label="Back">
-          <FontAwesomeIcon icon={faArrowLeft} />
-        </button>
         <div style={s.headerTitle}>Your dream</div>
-        <div style={{ width: 40 }} />
       </header>
 
       {loading ? (
@@ -134,31 +130,24 @@ export default function DreamPage() {
 
 const s: Record<string, React.CSSProperties> = {
   shell: {
-    height: "100dvh",
+    position: "fixed",
+    inset: 0,
     background: "black",
     color: "white",
     display: "grid",
     gridTemplateRows: "64px 1fr",
+    overflow: "hidden",
+    zIndex: 1,
   },
 
   header: {
-    display: "grid",
-    gridTemplateColumns: "40px 1fr 40px",
+    display: "flex",
     alignItems: "center",
+    justifyContent: "center",
     padding: "0 12px",
     background: "linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0))",
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(255,255,255,0.06)",
-    color: "white",
-    cursor: "pointer",
-    backdropFilter: "blur(12px)",
-  },
-  headerTitle: { textAlign: "center", fontWeight: 900, letterSpacing: -0.2 },
+  headerTitle: { fontWeight: 900, letterSpacing: -0.2 },
 
   center: {
     display: "grid",
@@ -182,20 +171,24 @@ const s: Record<string, React.CSSProperties> = {
   },
 
   card: {
-    alignSelf: "center",
     justifySelf: "center",
     width: "min(560px, 100vw)",
     padding: 12,
+    overflow: "auto",
+    display: "flex",
+    flexDirection: "column",
+    minHeight: 0,
   },
 
-media: {
-  position: "relative",
-  width: "100%",
-  aspectRatio: "4 / 5",   // statt 9/16
-  maxHeight: 420,        // limitiert die Höhe
-  borderRadius: 22,
-  overflow: "hidden",
-},
+  media: {
+    position: "relative",
+    width: "100%",
+    aspectRatio: "4 / 5",
+    maxHeight: "min(420px, 45dvh)",
+    borderRadius: 22,
+    overflow: "hidden",
+    flexShrink: 1,
+  },
   mediaShade: {
     position: "absolute",
     inset: 0,

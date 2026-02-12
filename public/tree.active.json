@@ -1,6 +1,6 @@
 {
-  "treeId": "dorfplatz",
-  "version": "v3",
+  "treeId": "m",
+  "version": "0.004",
   "startNodeId": "lvl1",
   "nodes": {
     "lvl1": {

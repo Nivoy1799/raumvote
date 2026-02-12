@@ -29,6 +29,7 @@ export type TreeSnapshot = {
   version: string; // could be a hash later
   startNodeId: string;
   nodes: Record<string, Node>;
+  options: Record<string, Option>;
 };
 
 export type ActiveTreeMeta = Pick<TreeSnapshot, "treeId" | "version" | "startNodeId">;

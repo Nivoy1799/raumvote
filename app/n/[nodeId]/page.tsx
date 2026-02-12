@@ -31,10 +31,11 @@ export default function NodePage() {
     const [rightOption, setRightOption] = useState<Option | null>(null);
 
     const [voterId, setVoterId] = useState<string | null>(null);
-    const [submittingOption, setSubmittingOption] = useState<string | null>(null);
 
     const [likedLeft, setLikedLeft] = useState(false);
     const [likedRight, setLikedRight] = useState(false);
+    const [likeCountLeft, setLikeCountLeft] = useState(0);
+    const [likeCountRight, setLikeCountRight] = useState(0);
     const [votedOptionId, setVotedOptionId] = useState<string | null>(null);
 
 
@@ -78,14 +79,18 @@ export default function NodePage() {
         if (!treeId || !treeVersion || !voterId || !leftOption || !rightOption) return;
 
         (async () => {
-            const [l1, l2, v] = await Promise.all([
+            const [l1, l2, v, c1, c2] = await Promise.all([
                 fetch(`/api/like/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(leftOption.id)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
                 fetch(`/api/like/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(rightOption.id)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
                 fetch(`/api/vote/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
+                fetch(`/api/like/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(leftOption.id)}`).then(r => r.json()),
+                fetch(`/api/like/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(rightOption.id)}`).then(r => r.json()),
             ]);
 
             setLikedLeft(!!l1.liked);
             setLikedRight(!!l2.liked);
+            setLikeCountLeft(c1.count ?? 0);
+            setLikeCountRight(c2.count ?? 0);
             setVotedOptionId(v.optionId ?? null);
         })();
     }, [treeId, treeVersion, voterId, leftOption, rightOption]);
@@ -94,15 +99,11 @@ export default function NodePage() {
     async function vote(optionId: string) {
         if (!voterId) return;
 
-        setSubmittingOption(optionId);
-
         const res = await fetch("/api/vote", {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ treeId, treeVersion, voterId, optionId }),
         });
-
-        setSubmittingOption(null);
 
         if (res.ok) setVotedOptionId(optionId);
     }
@@ -120,8 +121,14 @@ export default function NodePage() {
         const data = await res.json().catch(() => null);
         if (data?.liked === undefined) return;
 
-        if (leftOption?.id === optionId) setLikedLeft(!!data.liked);
-        if (rightOption?.id === optionId) setLikedRight(!!data.liked);
+        if (leftOption?.id === optionId) {
+            setLikedLeft(!!data.liked);
+            setLikeCountLeft((c) => c + (data.liked ? 1 : -1));
+        }
+        if (rightOption?.id === optionId) {
+            setLikedRight(!!data.liked);
+            setLikeCountRight((c) => c + (data.liked ? 1 : -1));
+        }
     }
 
 
@@ -157,7 +164,7 @@ export default function NodePage() {
                 <header style={s.top}>
                     <div>
                         <div style={s.context}>
-                            Dorfplatz • {treeId} • {treeVersion}
+                            RaumVote • {treeId} • {treeVersion}
                         </div>
                         <div style={s.question}>{node.question}</div>
                     </div>
@@ -183,6 +190,7 @@ export default function NodePage() {
                                 <RoundIcon
                                 icon={faHeart}
                                 active={likedLeft}
+                                label={likeCountLeft}
                                 onClick={(e: any) => { e.stopPropagation(); toggleLike(leftOption.id); }}
                                 />
 
@@ -192,11 +200,6 @@ export default function NodePage() {
                                 onClick={(e: any) => { e.stopPropagation(); vote(leftOption.id); }}
                                 />
                             </div>
-
-
-                            {submittingOption === leftOption.id && (
-                                <div style={s.saving}>Saving…</div>
-                            )}
                         </div>
                     </button>
 
@@ -221,6 +224,7 @@ export default function NodePage() {
                                 <RoundIcon
                                 icon={faHeart}
                                 active={likedRight}
+                                label={likeCountRight}
                                 onClick={(e: any) => { e.stopPropagation(); toggleLike(rightOption.id); }}
                                 />
 
@@ -230,11 +234,6 @@ export default function NodePage() {
                                 onClick={(e: any) => { e.stopPropagation(); vote(rightOption.id); }}
                                 />
                             </div>
-
-
-                            {submittingOption === rightOption.id && (
-                                <div style={s.saving}>Saving…</div>
-                            )}
                         </div>
                     </button>
                 </section>
@@ -251,11 +250,19 @@ function SmallBtn({ children, onClick }: any) {
     );
 }
 
-function RoundIcon({ icon, active, onClick }: any) {
+function RoundIcon({ icon, active, label, onClick }: any) {
+  const hasLabel = label != null;
   return (
-    <button onClick={onClick} style={{ ...s.roundIcon, ...(active ? s.roundIconActive : null) }}>
-      <FontAwesomeIcon icon={icon} style={{ fontSize: 16, color: active ? "#ff3b5c" : "white" }} />
-    </button>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+      <button onClick={onClick} style={{ ...s.roundIcon, ...(active ? s.roundIconActive : null) }}>
+        <FontAwesomeIcon icon={icon} style={{ fontSize: 16, color: active ? "#ff3b5c" : "white" }} />
+      </button>
+      {hasLabel && (
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", visibility: label > 0 ? "visible" : "hidden" }}>
+          {label || 0}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -264,8 +271,16 @@ function RoundIcon({ icon, active, onClick }: any) {
 const TABBAR_HEIGHT = 64;
 
 const s: Record<string, React.CSSProperties> = {
-    shell: { height: "100dvh", background: "black", display: "grid", placeItems: "center" },
-    frame: { position: "relative", width: "min(560px, 100vw)", height: "100dvh" },
+    shell: {
+        position: "fixed",
+        inset: 0,
+        background: "black",
+        display: "grid",
+        placeItems: "center",
+        overflow: "hidden",
+        zIndex: 1,
+    },
+    frame: { position: "relative", width: "min(560px, 100vw)", height: "100%", overflow: "hidden" },
 
     top: {
         position: "absolute",
@@ -316,7 +331,6 @@ const s: Record<string, React.CSSProperties> = {
     },
 
     desc: { fontSize: 13, opacity: 0.8, marginTop: 6 },
-    saving: { fontSize: 12, marginTop: 8 },
 
     optionActions: {
         display: "flex",

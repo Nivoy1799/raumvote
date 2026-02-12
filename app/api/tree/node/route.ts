@@ -4,7 +4,7 @@ import path from "node:path";
 import type { TreeSnapshot } from "@/lib/tree.types";
 
 function loadActiveTree(): TreeSnapshot {
-  const file = path.join(process.cwd(), "data", "tree.active.json");
+  const file = path.join(process.cwd(), "public", "tree.active.json");
   const raw = fs.readFileSync(file, "utf-8");
   return JSON.parse(raw) as TreeSnapshot;
 }

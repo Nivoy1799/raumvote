@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { hashVoterId } from "@/lib/voterHash";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -12,9 +13,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
 
+  const voterHash = hashVoterId(voterId);
+
   const like = await prisma.like.findUnique({
     where: {
-      treeId_treeVersion_optionId_voterId: { treeId, treeVersion, optionId, voterId },
+      treeId_treeVersion_optionId_voterHash: { treeId, treeVersion, optionId, voterHash },
     },
     select: { id: true },
   });

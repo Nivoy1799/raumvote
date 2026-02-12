@@ -12,13 +12,12 @@ model Vote {
   id          String   @id @default(cuid())
   treeId      String
   treeVersion String
-  voterId     String
   optionId    String
+  voterHash   String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@unique([treeId, treeVersion, voterId])
-  @@index([optionId])
+  @@unique([treeId, treeVersion, voterHash]) // 1 Vote pro Tree/Version pro User
 }
 
 model Like {
@@ -26,8 +25,18 @@ model Like {
   treeId      String
   treeVersion String
   optionId    String
-  voterId     String
+  voterHash   String
   createdAt   DateTime @default(now())
 
-  @@unique([treeId, treeVersion, optionId, voterId])
+  @@unique([treeId, treeVersion, optionId, voterHash]) // 1 Like pro Option pro User
 }
+
+
+model User {
+  id        String   @id @default(cuid())
+  voterHash String   @unique
+  username  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

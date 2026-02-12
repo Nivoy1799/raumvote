@@ -20,8 +20,8 @@ export type Node = {
 };
 
 export const TREE: Record<string, Node> = {
-  "dorfplatz-1": {
-    id: "dorfplatz-1",
+  "RaumVote-1": {
+    id: "RaumVote-1",
     question: "Welche Realität würdest du lieber erleben?",
     left: {
       label: "Chill-Zone",
@@ -38,4 +38,4 @@ export const TREE: Record<string, Node> = {
   },
 };
 
-export const START_NODE_ID = "dorfplatz-1";
+export const START_NODE_ID = "RaumVote-1";

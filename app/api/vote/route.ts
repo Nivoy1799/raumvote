@@ -1,25 +1,23 @@
-import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { hashVoterId } from "@/lib/voterHash";
 
 export async function POST(req: Request) {
   const body = await req.json();
+  const { treeId, treeVersion, optionId, voterId } = body;
 
-  const { treeId, treeVersion, voterId, optionId } = body;
-
-  if (!treeId || !treeVersion || !voterId || !optionId) {
-    return NextResponse.json({ error: "Missing data" }, { status: 400 });
+  if (!treeId || !treeVersion || !optionId || !voterId) {
+    return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
+
+  const voterHash = hashVoterId(voterId);
 
   await prisma.vote.upsert({
     where: {
-      treeId_treeVersion_voterId: {
-        treeId,
-        treeVersion,
-        voterId,
-      },
+      treeId_treeVersion_voterHash: { treeId, treeVersion, voterHash },
     },
-    update: { optionId },
-    create: { treeId, treeVersion, voterId, optionId },
+    create: { treeId, treeVersion, voterHash, optionId },
+    update: { optionId }, // überschreibt die Wahl
   });
 
   return NextResponse.json({ ok: true });
