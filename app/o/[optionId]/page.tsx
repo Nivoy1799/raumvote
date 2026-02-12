@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Option } from "@/lib/tree.types";
 import { fetchActiveTreeMeta, fetchOption } from "@/lib/tree.client";
-import { faHeart, faChartSimple, faComment, faShare } from "@fortawesome/free-solid-svg-icons";
+import { faHeart, faCheckToSlot, faComment, faShare } from "@fortawesome/free-solid-svg-icons";
 import { ActionRail } from "@/components/ActionRail";
 
 export default function OptionPage() {
@@ -116,8 +116,8 @@ export default function OptionPage() {
           {/* Rail inside image, bottom-right */}
           <div style={s.railWrap}>
             <ActionRail items={[
-              { icon: faHeart, active: liked, label: likeCount, onClick: toggleLike },
-              { icon: faChartSimple, active: voted, activeColor: "#60a5fa", label: voted ? "Voted" : "Vote", onClick: vote },
+              { icon: faHeart, active: liked, count: likeCount, onClick: toggleLike },
+              { icon: faCheckToSlot, active: voted, activeColor: "#60a5fa", onClick: vote },
               { icon: faComment, onClick: () => {} },
               { icon: faShare, onClick: share },
             ]} />

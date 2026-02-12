@@ -7,7 +7,7 @@ import type { Node, Option } from "@/lib/tree.types";
 import { fetchActiveTreeMeta, fetchNode, fetchOption } from "@/lib/tree.client";
 import { useSwipeChoice } from "@/lib/useSwipeChoice";
 
-import { faHeart, faComment, faShare, faChartSimple } from "@fortawesome/free-solid-svg-icons";
+import { faHeart, faComment, faShare, faCheckToSlot } from "@fortawesome/free-solid-svg-icons";
 import { ActionRail } from "@/components/ActionRail";
 
 export default function NodePage() {
@@ -191,8 +191,8 @@ export default function NodePage() {
                                     )}
                                 </div>
                                 <ActionRail items={[
-                                    { icon: faHeart, active: likedLeft, label: likeCountLeft, onClick: () => toggleLike(leftOption.id) },
-                                    { icon: faChartSimple, active: votedOptionId === leftOption.id, activeColor: "#60a5fa", label: votedOptionId === leftOption.id ? "Voted" : "Vote", onClick: () => vote(leftOption.id) },
+                                    { icon: faHeart, active: likedLeft, count: likeCountLeft, onClick: () => toggleLike(leftOption.id) },
+                                    { icon: faCheckToSlot, active: votedOptionId === leftOption.id, activeColor: "#60a5fa", onClick: () => vote(leftOption.id) },
                                     { icon: faComment, onClick: () => {} },
                                     { icon: faShare, onClick: () => shareOption(leftOption.id) },
                                 ]} />
@@ -220,8 +220,8 @@ export default function NodePage() {
                                     )}
                                 </div>
                                 <ActionRail items={[
-                                    { icon: faHeart, active: likedRight, label: likeCountRight, onClick: () => toggleLike(rightOption.id) },
-                                    { icon: faChartSimple, active: votedOptionId === rightOption.id, activeColor: "#60a5fa", label: votedOptionId === rightOption.id ? "Voted" : "Vote", onClick: () => vote(rightOption.id) },
+                                    { icon: faHeart, active: likedRight, count: likeCountRight, onClick: () => toggleLike(rightOption.id) },
+                                    { icon: faCheckToSlot, active: votedOptionId === rightOption.id, activeColor: "#60a5fa", onClick: () => vote(rightOption.id) },
                                     { icon: faComment, onClick: () => {} },
                                     { icon: faShare, onClick: () => shareOption(rightOption.id) },
                                 ]} />
