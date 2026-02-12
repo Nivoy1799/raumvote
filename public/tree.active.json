@@ -1,0 +1,69 @@
+{
+  "treeId": "dorfplatz",
+  "version": "v3",
+  "startNodeId": "lvl1",
+  "nodes": {
+    "lvl1": {
+      "id": "lvl1",
+      "question": "Was passt heute eher zu dir?",
+      "leftOptionId": "opt_action",
+      "rightOptionId": "opt_chill"
+    },
+    "lvl2_action": {
+      "id": "lvl2_action",
+      "question": "Wie aktiv darf es sein?",
+      "leftOptionId": "opt_sport",
+      "rightOptionId": "opt_stage"
+    },
+    "lvl2_chill": {
+      "id": "lvl2_chill",
+      "question": "Wie ruhig darf es sein?",
+      "leftOptionId": "opt_green",
+      "rightOptionId": "opt_minimal"
+    }
+  },
+  "options": {
+    "opt_action": {
+      "id": "opt_action",
+      "title": "Action & Begegnung",
+      "description": "Etwas erleben, Leute treffen.",
+      "mediaUrl": "/media/action.jpg",
+      "nextNodeId": "lvl2_action"
+    },
+    "opt_chill": {
+      "id": "opt_chill",
+      "title": "Chill & Rückzug",
+      "description": "Ruhige Atmosphäre.",
+      "mediaUrl": "/media/chill.jpg",
+      "nextNodeId": "lvl2_chill"
+    },
+    "opt_sport": {
+      "id": "opt_sport",
+      "title": "Sportplatz Hybrid",
+      "description": "Basketball + Treffpunkt.",
+      "mediaUrl": "/media/sport.jpg",
+      "isEnd": true
+    },
+    "opt_stage": {
+      "id": "opt_stage",
+      "title": "Event Bühne",
+      "description": "Konzerte & Community Events.",
+      "mediaUrl": "/media/stage.jpg",
+      "isEnd": true
+    },
+    "opt_green": {
+      "id": "opt_green",
+      "title": "Urban Jungle",
+      "description": "Viel Grün & Sitzstufen.",
+      "mediaUrl": "/media/green.jpg",
+      "isEnd": true
+    },
+    "opt_minimal": {
+      "id": "opt_minimal",
+      "title": "Minimal Square",
+      "description": "Klare Linien, warmes Licht.",
+      "mediaUrl": "/media/minimal.jpg",
+      "isEnd": true
+    }
+  }
+}

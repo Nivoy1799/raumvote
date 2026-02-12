@@ -7,8 +7,25 @@ datasource db {
 }
 
 model Vote {
-  id        String   @id @default(cuid())
-  nodeId    String
-  choice    String   // "left" | "right"
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  treeId      String
+  treeVersion String
+  voterId     String
+  optionId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([treeId, treeVersion, voterId])
+  @@index([optionId])
+}
+
+model Like {
+  id          String   @id @default(cuid())
+  treeId      String
+  treeVersion String
+  optionId    String
+  voterId     String
+  createdAt   DateTime @default(now())
+
+  @@unique([treeId, treeVersion, optionId, voterId])
 }
