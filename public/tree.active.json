@@ -20,6 +20,12 @@
       "question": "Wie ruhig darf es sein?",
       "leftOptionId": "opt_green",
       "rightOptionId": "opt_minimal"
+    },
+    "lvl3_sport": {
+      "id": "lvl3_sport",
+      "question": "Wie urban darf es sein?",
+      "leftOptionId": "opt_urban",
+      "rightOptionId": "opt_natural"
     }
   },
   "options": {
@@ -42,13 +48,14 @@
       "title": "Sportplatz Hybrid",
       "description": "Basketball + Treffpunkt.",
       "mediaUrl": "/media/sport.jpg",
-      "isEnd": true
+      "nextNodeId": "lvl3_sport",
+      "isEnd": false
     },
     "opt_stage": {
       "id": "opt_stage",
       "title": "Event Bühne",
       "description": "Konzerte & Community Events.",
-      "mediaUrl": "/media/stage.jpg",
+      "mediaUrl": "/media/stage.png",
       "isEnd": true
     },
     "opt_green": {
@@ -63,6 +70,20 @@
       "title": "Minimal Square",
       "description": "Klare Linien, warmes Licht.",
       "mediaUrl": "/media/minimal.jpg",
+      "isEnd": true
+    },
+    "opt_urban": {
+      "id": "opt_urban",
+      "title": "Urban",
+      "description": "Harter Belag, Street-Atmosphäre.",
+      "mediaUrl": "/media/urban.png",
+      "isEnd": true
+    },
+    "opt_natural": {
+      "id": "opt_natural",
+      "title": "Natürlicher Platz",
+      "description": "Grüne Flächen, Naturbezug.",
+      "mediaUrl": "/media/natural.png",
       "isEnd": true
     }
   }
