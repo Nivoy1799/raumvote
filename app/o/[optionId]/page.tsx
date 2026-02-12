@@ -5,8 +5,8 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Option } from "@/lib/tree.types";
 import { fetchActiveTreeMeta, fetchOption } from "@/lib/tree.client";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHeart, faChartSimple, faShare } from "@fortawesome/free-solid-svg-icons";
+import { faHeart, faChartSimple, faComment, faShare } from "@fortawesome/free-solid-svg-icons";
+import { ActionRail } from "@/components/ActionRail";
 
 export default function OptionPage() {
   const params = useParams<{ optionId: string }>();
@@ -79,7 +79,8 @@ export default function OptionPage() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ treeId, treeVersion, voterId, optionId }),
     });
-    if (res.ok) setVoted(true);
+    const data = await res.json().catch(() => null);
+    if (data?.ok) setVoted(data.optionId === optionId);
   }
 
   const shareUrl = useMemo(() => {
@@ -111,28 +112,24 @@ export default function OptionPage() {
         <div style={s.media}>
           <Image src={option.mediaUrl} alt={option.title} fill priority style={{ objectFit: "cover" }} />
           <div style={s.mediaShade} />
+
+          {/* Rail inside image, bottom-right */}
+          <div style={s.railWrap}>
+            <ActionRail items={[
+              { icon: faHeart, active: liked, label: likeCount, onClick: toggleLike },
+              { icon: faChartSimple, active: voted, activeColor: "#60a5fa", label: voted ? "Voted" : "Vote", onClick: vote },
+              { icon: faComment, onClick: () => {} },
+              { icon: faShare, onClick: share },
+            ]} />
+          </div>
+
           <div style={s.mediaContent}>
             <div style={s.title}>{option.title}</div>
             {option.description && <div style={s.desc}>{option.description}</div>}
           </div>
         </div>
-
-        <div style={s.actions}>
-          <ActionBtn icon={faHeart} label={likeCount > 0 ? String(likeCount) : undefined} active={liked} onClick={toggleLike} />
-          <ActionBtn icon={faChartSimple} label="Vote" active={voted} onClick={vote} />
-          <ActionBtn icon={faShare} label="Share" onClick={share} />
-        </div>
       </div>
     </main>
-  );
-}
-
-function ActionBtn({ icon, label, active, onClick }: any) {
-  return (
-    <button onClick={onClick} style={{ ...s.actionBtn, ...(active ? s.actionBtnActive : null) }}>
-      <FontAwesomeIcon icon={icon} style={{ fontSize: 16, color: active ? "#ff3b5c" : "white" }} />
-      {label && <span style={{ fontSize: 12, color: active ? "#ff3b5c" : "rgba(255,255,255,0.8)" }}>{label}</span>}
-    </button>
   );
 }
 
@@ -154,6 +151,7 @@ const s: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     padding: 12,
+    paddingBottom: 80,
   },
 
   media: {
@@ -172,36 +170,15 @@ const s: Record<string, React.CSSProperties> = {
   mediaContent: {
     position: "absolute",
     left: 14,
-    right: 14,
+    right: 60,
     bottom: 14,
+  },
+  railWrap: {
+    position: "absolute",
+    right: 10,
+    bottom: 14,
+    zIndex: 2,
   },
   title: { fontSize: 22, fontWeight: 950, letterSpacing: -0.3 },
   desc: { marginTop: 6, fontSize: 13, opacity: 0.78, lineHeight: 1.35 },
-
-  actions: {
-    display: "flex",
-    gap: 10,
-    marginTop: 12,
-    paddingBottom: 80,
-  },
-
-  actionBtn: {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    padding: "12px 14px",
-    borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(255,255,255,0.06)",
-    color: "white",
-    cursor: "pointer",
-    fontWeight: 800,
-    transition: "all 0.2s ease",
-  },
-  actionBtnActive: {
-    border: "1px solid rgba(255,255,255,0.25)",
-    boxShadow: "0 0 0 2px rgba(255,255,255,0.08), 0 0 14px rgba(255, 59, 92, 0.2)",
-  },
 };

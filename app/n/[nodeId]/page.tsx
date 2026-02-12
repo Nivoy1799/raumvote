@@ -7,16 +7,8 @@ import type { Node, Option } from "@/lib/tree.types";
 import { fetchActiveTreeMeta, fetchNode, fetchOption } from "@/lib/tree.client";
 import { useSwipeChoice } from "@/lib/useSwipeChoice";
 
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-    faHeart,
-    faComment,
-    faShare,
-    faHouse,
-    faChartSimple,
-    faWandSparkles,
-    faUser,
-} from "@fortawesome/free-solid-svg-icons";
+import { faHeart, faComment, faShare, faChartSimple } from "@fortawesome/free-solid-svg-icons";
+import { ActionRail } from "@/components/ActionRail";
 
 export default function NodePage() {
     const router = useRouter();
@@ -105,7 +97,8 @@ export default function NodePage() {
             body: JSON.stringify({ treeId, treeVersion, voterId, optionId }),
         });
 
-        if (res.ok) setVotedOptionId(optionId);
+        const data = await res.json().catch(() => null);
+        if (data?.ok) setVotedOptionId(data.optionId ?? null);
     }
 
 
@@ -131,6 +124,15 @@ export default function NodePage() {
         }
     }
 
+
+    async function shareOption(optionId: string) {
+        const url = `${window.location.origin}/o/${encodeURIComponent(optionId)}`;
+        if (navigator.share) {
+            await navigator.share({ title: "RaumVote", url });
+        } else {
+            await navigator.clipboard.writeText(url);
+        }
+    }
 
     function navigate(option: Option) {
         if (option.nextNodeId) {
@@ -181,24 +183,19 @@ export default function NodePage() {
                             style={{ objectFit: "cover" }}
                         />
                         <div style={s.overlay}>
-                            <div style={s.title}>{leftOption.title}</div>
-                            {leftOption.description && (
-                                <div style={s.desc}>{leftOption.description}</div>
-                            )}
-
-                            <div style={s.optionActions}>
-                                <RoundIcon
-                                icon={faHeart}
-                                active={likedLeft}
-                                label={likeCountLeft}
-                                onClick={(e: any) => { e.stopPropagation(); toggleLike(leftOption.id); }}
-                                />
-
-                                <RoundIcon
-                                icon={faChartSimple}
-                                active={votedOptionId === leftOption.id}
-                                onClick={(e: any) => { e.stopPropagation(); vote(leftOption.id); }}
-                                />
+                            <div style={s.overlayInner}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={s.title}>{leftOption.title}</div>
+                                    {leftOption.description && (
+                                        <div style={s.desc}>{leftOption.description}</div>
+                                    )}
+                                </div>
+                                <ActionRail items={[
+                                    { icon: faHeart, active: likedLeft, label: likeCountLeft, onClick: () => toggleLike(leftOption.id) },
+                                    { icon: faChartSimple, active: votedOptionId === leftOption.id, activeColor: "#60a5fa", label: votedOptionId === leftOption.id ? "Voted" : "Vote", onClick: () => vote(leftOption.id) },
+                                    { icon: faComment, onClick: () => {} },
+                                    { icon: faShare, onClick: () => shareOption(leftOption.id) },
+                                ]} />
                             </div>
                         </div>
                     </button>
@@ -215,24 +212,19 @@ export default function NodePage() {
                             style={{ objectFit: "cover" }}
                         />
                         <div style={s.overlay}>
-                            <div style={s.title}>{rightOption.title}</div>
-                            {rightOption.description && (
-                                <div style={s.desc}>{rightOption.description}</div>
-                            )}
-
-                            <div style={s.optionActions}>
-                                <RoundIcon
-                                icon={faHeart}
-                                active={likedRight}
-                                label={likeCountRight}
-                                onClick={(e: any) => { e.stopPropagation(); toggleLike(rightOption.id); }}
-                                />
-
-                                <RoundIcon
-                                icon={faChartSimple}
-                                active={votedOptionId === rightOption.id}
-                                onClick={(e: any) => { e.stopPropagation(); vote(rightOption.id); }}
-                                />
+                            <div style={s.overlayInner}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={s.title}>{rightOption.title}</div>
+                                    {rightOption.description && (
+                                        <div style={s.desc}>{rightOption.description}</div>
+                                    )}
+                                </div>
+                                <ActionRail items={[
+                                    { icon: faHeart, active: likedRight, label: likeCountRight, onClick: () => toggleLike(rightOption.id) },
+                                    { icon: faChartSimple, active: votedOptionId === rightOption.id, activeColor: "#60a5fa", label: votedOptionId === rightOption.id ? "Voted" : "Vote", onClick: () => vote(rightOption.id) },
+                                    { icon: faComment, onClick: () => {} },
+                                    { icon: faShare, onClick: () => shareOption(rightOption.id) },
+                                ]} />
                             </div>
                         </div>
                     </button>
@@ -241,31 +233,6 @@ export default function NodePage() {
         </main>
     );
 }
-
-function SmallBtn({ children, onClick }: any) {
-    return (
-        <button onClick={onClick} style={s.smallBtn}>
-            {children}
-        </button>
-    );
-}
-
-function RoundIcon({ icon, active, label, onClick }: any) {
-  const hasLabel = label != null;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-      <button onClick={onClick} style={{ ...s.roundIcon, ...(active ? s.roundIconActive : null) }}>
-        <FontAwesomeIcon icon={icon} style={{ fontSize: 16, color: active ? "#ff3b5c" : "white" }} />
-      </button>
-      {hasLabel && (
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", visibility: label > 0 ? "visible" : "hidden" }}>
-          {label || 0}
-        </span>
-      )}
-    </div>
-  );
-}
-
 
 
 const TABBAR_HEIGHT = 64;
@@ -332,63 +299,9 @@ const s: Record<string, React.CSSProperties> = {
 
     desc: { fontSize: 13, opacity: 0.8, marginTop: 6 },
 
-    optionActions: {
+    overlayInner: {
         display: "flex",
-        gap: 10,
-        marginTop: 14,
+        alignItems: "flex-end",
+        gap: 8,
     },
-
-    roundIcon: {
-        width: 42,
-        height: 42,
-        borderRadius: "50%",
-        border: "1px solid rgba(255,255,255,0.2)",
-        background: "rgba(0,0,0,0.35)",
-        backdropFilter: "blur(12px)",
-        color: "white",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-        transition: "all 0.2s ease",
-    },
-
-
-    smallBtn: {
-        background: "rgba(255,255,255,0.15)",
-        border: "1px solid rgba(255,255,255,0.2)",
-        color: "white",
-        padding: "6px 10px",
-        borderRadius: 12,
-        fontSize: 12,
-        cursor: "pointer",
-    },
-    rail: {
-        position: "absolute",
-        right: 14,
-        top: "40%",
-        display: "flex",
-        flexDirection: "column",
-        gap: 20,
-        zIndex: 6,
-    },
-
-
-    tab: {
-        border: "none",
-        background: "transparent",
-        color: "white",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-
-    tabIcon: { fontSize: 16 },
-    tabLabel: { fontSize: 10, opacity: 0.8 },
-    roundIconActive: {
-        border: "1px solid rgba(255,255,255,0.35)",
-        boxShadow: "0 0 0 2px rgba(255,255,255,0.10), 0 0 18px rgba(255, 59, 92, 0.28)",
-        transform: "scale(1.02)",
-        },
 };
