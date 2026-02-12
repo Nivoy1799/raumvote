@@ -12,13 +12,20 @@ export async function POST(req: Request) {
 
   const voterHash = hashVoterId(voterId);
 
-  await prisma.vote.upsert({
-    where: {
-      treeId_treeVersion_voterHash: { treeId, treeVersion, voterHash },
-    },
-    create: { treeId, treeVersion, voterHash, optionId },
-    update: { optionId }, // überschreibt die Wahl
+  const existing = await prisma.vote.findUnique({
+    where: { treeId_treeVersion_voterHash: { treeId, treeVersion, voterHash } },
   });
 
-  return NextResponse.json({ ok: true });
+  if (existing && existing.optionId === optionId) {
+    await prisma.vote.delete({ where: { id: existing.id } });
+    return NextResponse.json({ ok: true, optionId: null });
+  }
+
+  await prisma.vote.upsert({
+    where: { treeId_treeVersion_voterHash: { treeId, treeVersion, voterHash } },
+    create: { treeId, treeVersion, voterHash, optionId },
+    update: { optionId },
+  });
+
+  return NextResponse.json({ ok: true, optionId });
 }
