@@ -65,3 +65,11 @@ model CommentLike {
   @@unique([commentId, voterHash])
 }
 
+model AccessToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  label     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
