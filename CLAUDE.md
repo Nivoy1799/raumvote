@@ -28,12 +28,15 @@ The voting content is a static JSON tree (`public/tree.active.json`) with nodes 
 
 ### Voter identity (privacy-first)
 
-Users are anonymous. A UUID `voterId` lives in `localStorage` only. The server never stores it — all DB records use `voterHash` (SHA-256 of `VOTER_PEPPER:voterId` via `lib/voterHash.ts`). Usernames and avatars are optional profile data.
+Access is controlled via pre-created tokens (UUIDs) stored in the `AccessToken` table. An admin creates tokens at `/admin`, which are distributed as QR codes encoding `/login/{token}`. When scanned, the token is saved to `localStorage` as `voterId`. All API routes validate the token via `lib/validateToken.ts`. The `useAuth()` hook (`lib/useAuth.ts`) replaces manual voterId handling on all pages — it checks localStorage and validates against the server, redirecting to `/denied` if invalid. The server never stores raw tokens in vote/like/comment records — all DB records use `voterHash` (SHA-256 of `VOTER_PEPPER:voterId` via `lib/voterHash.ts`).
 
 ### Page routes
 
 | Route | Purpose |
 |---|---|
+| `/login/[token]` | QR code landing — validates token, saves to localStorage, redirects to /start |
+| `/denied` | Access denied page — shown when no valid token |
+| `/admin` | Token management (password-gated via ADMIN_SECRET) |
 | `/start` | Redirects to first tree node |
 | `/n/[nodeId]` | Split-screen binary choice (main voting UI) |
 | `/o/[optionId]` | Single option detail view |
@@ -57,6 +60,8 @@ All API routes follow the same pattern: validate params → hash voterId → Pri
 | `/api/comment/like` | POST | Toggle like on comment |
 | `/api/me` | GET, POST | User profile (username, avatarUrl) |
 | `/api/results` | GET | Aggregated vote counts |
+| `/api/auth/validate` | GET | Check if a token is valid and active |
+| `/api/admin/tokens` | GET, POST, PATCH, DELETE | Token CRUD (protected by ADMIN_SECRET header) |
 
 ### Shared components
 
@@ -73,6 +78,7 @@ Inline `React.CSSProperties` objects (no CSS modules/styled-components). Styles 
 - `DATABASE_URL` — Neon pooled connection string
 - `DIRECT_URL` — Neon direct connection (for migrations)
 - `VOTER_PEPPER` — Secret pepper for voter ID hashing (required, crashes on startup if missing)
+- `ADMIN_SECRET` — Secret for admin API/page access (required for /admin)
 
 ## Key conventions
 
