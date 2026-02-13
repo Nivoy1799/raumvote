@@ -7,6 +7,7 @@ import type { Option } from "@/lib/tree.types";
 import { fetchActiveTreeMeta, fetchOption } from "@/lib/tree.client";
 import { faHeart, faCheckToSlot, faComment, faShare } from "@fortawesome/free-solid-svg-icons";
 import { ActionRail } from "@/components/ActionRail";
+import { CommentBottomSheet } from "@/components/CommentBottomSheet";
 
 export default function OptionPage() {
   const params = useParams<{ optionId: string }>();
@@ -20,6 +21,8 @@ export default function OptionPage() {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [voted, setVoted] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
 
   useEffect(() => {
     let id = localStorage.getItem("voterId");
@@ -47,15 +50,17 @@ export default function OptionPage() {
     if (!treeId || !treeVersion || !voterId || !optionId) return;
 
     (async () => {
-      const [ls, lc, vs] = await Promise.all([
+      const [ls, lc, vs, cc] = await Promise.all([
         fetch(`/api/like/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(optionId)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
         fetch(`/api/like/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(optionId)}`).then(r => r.json()),
         fetch(`/api/vote/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
+        fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(optionId)}`).then(r => r.json()),
       ]);
 
       setLiked(!!ls.liked);
       setLikeCount(lc.count ?? 0);
       setVoted(vs.optionId === optionId);
+      setCommentCount(cc.count ?? 0);
     })();
   }, [treeId, treeVersion, voterId, optionId]);
 
@@ -118,7 +123,7 @@ export default function OptionPage() {
             <ActionRail items={[
               { icon: faHeart, active: liked, count: likeCount, onClick: toggleLike },
               { icon: faCheckToSlot, active: voted, activeColor: "#60a5fa", onClick: vote },
-              { icon: faComment, onClick: () => {} },
+              { icon: faComment, count: commentCount, onClick: () => setCommentModalOpen(true) },
               { icon: faShare, onClick: share },
             ]} />
           </div>
@@ -129,6 +134,21 @@ export default function OptionPage() {
           </div>
         </div>
       </div>
+      {voterId && (
+        <CommentBottomSheet
+          isOpen={commentModalOpen}
+          onClose={() => {
+            setCommentModalOpen(false);
+            if (treeId && treeVersion) {
+              fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(optionId)}`).then(r => r.json()).then(d => setCommentCount(d.count ?? 0));
+            }
+          }}
+          treeId={treeId}
+          treeVersion={treeVersion}
+          optionId={optionId}
+          voterId={voterId}
+        />
+      )}
     </main>
   );
 }

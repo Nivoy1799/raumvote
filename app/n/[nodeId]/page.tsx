@@ -9,6 +9,7 @@ import { useSwipeChoice } from "@/lib/useSwipeChoice";
 
 import { faHeart, faComment, faShare, faCheckToSlot } from "@fortawesome/free-solid-svg-icons";
 import { ActionRail } from "@/components/ActionRail";
+import { CommentBottomSheet } from "@/components/CommentBottomSheet";
 
 export default function NodePage() {
     const router = useRouter();
@@ -29,7 +30,10 @@ export default function NodePage() {
     const [likeCountLeft, setLikeCountLeft] = useState(0);
     const [likeCountRight, setLikeCountRight] = useState(0);
     const [votedOptionId, setVotedOptionId] = useState<string | null>(null);
-
+    const [commentCountLeft, setCommentCountLeft] = useState(0);
+    const [commentCountRight, setCommentCountRight] = useState(0);
+    const [commentModalOpen, setCommentModalOpen] = useState(false);
+    const [commentModalOptionId, setCommentModalOptionId] = useState<string | null>(null);
 
     const nodeId = params.nodeId;
 
@@ -71,12 +75,14 @@ export default function NodePage() {
         if (!treeId || !treeVersion || !voterId || !leftOption || !rightOption) return;
 
         (async () => {
-            const [l1, l2, v, c1, c2] = await Promise.all([
+            const [l1, l2, v, c1, c2, cc1, cc2] = await Promise.all([
                 fetch(`/api/like/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(leftOption.id)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
                 fetch(`/api/like/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(rightOption.id)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
                 fetch(`/api/vote/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
                 fetch(`/api/like/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(leftOption.id)}`).then(r => r.json()),
                 fetch(`/api/like/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(rightOption.id)}`).then(r => r.json()),
+                fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(leftOption.id)}`).then(r => r.json()),
+                fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(rightOption.id)}`).then(r => r.json()),
             ]);
 
             setLikedLeft(!!l1.liked);
@@ -84,6 +90,8 @@ export default function NodePage() {
             setLikeCountLeft(c1.count ?? 0);
             setLikeCountRight(c2.count ?? 0);
             setVotedOptionId(v.optionId ?? null);
+            setCommentCountLeft(cc1.count ?? 0);
+            setCommentCountRight(cc2.count ?? 0);
         })();
     }, [treeId, treeVersion, voterId, leftOption, rightOption]);
 
@@ -124,6 +132,23 @@ export default function NodePage() {
         }
     }
 
+
+    function openComments(optionId: string) {
+        setCommentModalOptionId(optionId);
+        setCommentModalOpen(true);
+    }
+
+    function closeComments() {
+        setCommentModalOpen(false);
+        if (!treeId || !treeVersion || !leftOption || !rightOption) return;
+        Promise.all([
+            fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(leftOption.id)}`).then(r => r.json()),
+            fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(rightOption.id)}`).then(r => r.json()),
+        ]).then(([cc1, cc2]) => {
+            setCommentCountLeft(cc1.count ?? 0);
+            setCommentCountRight(cc2.count ?? 0);
+        });
+    }
 
     async function shareOption(optionId: string) {
         const url = `${window.location.origin}/o/${encodeURIComponent(optionId)}`;
@@ -193,7 +218,7 @@ export default function NodePage() {
                                 <ActionRail items={[
                                     { icon: faHeart, active: likedLeft, count: likeCountLeft, onClick: () => toggleLike(leftOption.id) },
                                     { icon: faCheckToSlot, active: votedOptionId === leftOption.id, activeColor: "#60a5fa", onClick: () => vote(leftOption.id) },
-                                    { icon: faComment, onClick: () => {} },
+                                    { icon: faComment, count: commentCountLeft, onClick: () => openComments(leftOption.id) },
                                     { icon: faShare, onClick: () => shareOption(leftOption.id) },
                                 ]} />
                             </div>
@@ -222,7 +247,7 @@ export default function NodePage() {
                                 <ActionRail items={[
                                     { icon: faHeart, active: likedRight, count: likeCountRight, onClick: () => toggleLike(rightOption.id) },
                                     { icon: faCheckToSlot, active: votedOptionId === rightOption.id, activeColor: "#60a5fa", onClick: () => vote(rightOption.id) },
-                                    { icon: faComment, onClick: () => {} },
+                                    { icon: faComment, count: commentCountRight, onClick: () => openComments(rightOption.id) },
                                     { icon: faShare, onClick: () => shareOption(rightOption.id) },
                                 ]} />
                             </div>
@@ -230,6 +255,17 @@ export default function NodePage() {
                     </button>
                 </section>
             </div>
+
+            {voterId && commentModalOptionId && (
+                <CommentBottomSheet
+                    isOpen={commentModalOpen}
+                    onClose={closeComments}
+                    treeId={treeId}
+                    treeVersion={treeVersion}
+                    optionId={commentModalOptionId}
+                    voterId={voterId}
+                />
+            )}
         </main>
     );
 }
