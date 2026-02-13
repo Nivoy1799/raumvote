@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUser, faCamera } from "@fortawesome/free-solid-svg-icons";
 
 export default function MePage() {
   const [voterId, setVoterId] = useState("");
   const [username, setUsername] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let id = localStorage.getItem("voterId");
@@ -24,6 +28,7 @@ export default function MePage() {
       const res = await fetch(`/api/me?voterId=${encodeURIComponent(voterId)}`, { cache: "no-store" });
       const data = await res.json().catch(() => null);
       setUsername((data?.username ?? "").toString());
+      setAvatarUrl(data?.avatarUrl || null);
       setLoading(false);
     })();
   }, [voterId]);
@@ -33,12 +38,34 @@ export default function MePage() {
     return `${voterId.slice(0, 8)}…${voterId.slice(-6)}`;
   }, [voterId]);
 
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 160;
+        canvas.height = 160;
+        const ctx = canvas.getContext("2d")!;
+        const size = Math.min(img.width, img.height);
+        const sx = (img.width - size) / 2;
+        const sy = (img.height - size) / 2;
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, 160, 160);
+        setAvatarUrl(canvas.toDataURL("image/jpeg", 0.8));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function save() {
     setSaved(false);
     const res = await fetch("/api/me", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ voterId, username }),
+      body: JSON.stringify({ voterId, username, avatarUrl }),
     });
     if (res.ok) {
       setSaved(true);
@@ -53,6 +80,20 @@ export default function MePage() {
         <div style={s.sub}>Gespeichert wird nur ein Hash deiner lokalen ID (keine UUID in der DB).</div>
 
         <section style={s.card}>
+          <div style={s.avatarRow}>
+            <button style={s.avatarWrap} onClick={() => fileRef.current?.click()}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" style={s.avatarImg} />
+              ) : (
+                <FontAwesomeIcon icon={faUser} style={{ fontSize: 32, color: "rgba(255,255,255,0.4)" }} />
+              )}
+              <div style={s.cameraBadge}>
+                <FontAwesomeIcon icon={faCamera} style={{ fontSize: 11 }} />
+              </div>
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
+          </div>
+
           <div style={s.label}>Deine lokale ID</div>
           <div style={s.idRow}>
             <code style={s.code}>{maskedId || "—"}</code>
@@ -95,6 +136,37 @@ const s: Record<string, React.CSSProperties> = {
   container: { width: "min(560px, 100vw)", margin: "0 auto", padding: "18px 14px 110px" },
   h1: { fontSize: 22, fontWeight: 950, letterSpacing: -0.3 },
   sub: { fontSize: 12, opacity: 0.7, marginTop: 6, lineHeight: 1.35 },
+
+  avatarRow: { display: "flex", justifyContent: "center", marginBottom: 14 },
+  avatarWrap: {
+    position: "relative" as const,
+    width: 80,
+    height: 80,
+    borderRadius: "50%",
+    background: "rgba(255,255,255,0.08)",
+    border: "2px solid rgba(255,255,255,0.15)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "visible",
+    cursor: "pointer",
+    padding: 0,
+    color: "white",
+  },
+  avatarImg: { width: 80, height: 80, borderRadius: "50%", objectFit: "cover" as const },
+  cameraBadge: {
+    position: "absolute" as const,
+    bottom: -2,
+    right: -2,
+    width: 26,
+    height: 26,
+    borderRadius: "50%",
+    background: "rgba(96,165,250,0.9)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "2px solid black",
+  },
 
   card: {
     marginTop: 14,
