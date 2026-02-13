@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Option } from "@/lib/tree.types";
 import { fetchActiveTreeMeta, fetchOption } from "@/lib/tree.client";
+import { useAuth } from "@/lib/useAuth";
 
 type LeaderRow = { optionId: string; count: number };
 type ResultsPayload = {
@@ -16,8 +17,8 @@ type ResultsPayload = {
 
 export default function ResultsClient() {
   const router = useRouter();
+  const { voterId } = useAuth();
 
-  const [voterId, setVoterId] = useState<string | null>(null);
   const [treeId, setTreeId] = useState("");
   const [treeVersion, setTreeVersion] = useState("");
 
@@ -25,15 +26,6 @@ export default function ResultsClient() {
   const [data, setData] = useState<ResultsPayload | null>(null);
   const [optCache, setOptCache] = useState<Record<string, Option>>({});
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let id = localStorage.getItem("voterId");
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem("voterId", id);
-    }
-    setVoterId(id);
-  }, []);
 
   useEffect(() => {
     fetchActiveTreeMeta().then((m) => {

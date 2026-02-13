@@ -7,25 +7,16 @@ import type { Option } from "@/lib/tree.types";
 import { fetchActiveTreeMeta, fetchOption } from "@/lib/tree.client";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faShare } from "@fortawesome/free-solid-svg-icons";
+import { useAuth } from "@/lib/useAuth";
 
 export default function DreamPage() {
   const router = useRouter();
+  const { voterId } = useAuth();
 
-  const [voterId, setVoterId] = useState<string | null>(null);
   const [treeId, setTreeId] = useState<string>("");
   const [treeVersion, setTreeVersion] = useState<string>("");
   const [option, setOption] = useState<Option | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // voterId from localStorage
-  useEffect(() => {
-    let id = localStorage.getItem("voterId");
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem("voterId", id);
-    }
-    setVoterId(id);
-  }, []);
 
   // load active meta (treeId/version)
   useEffect(() => {

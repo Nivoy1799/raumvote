@@ -3,23 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faCamera } from "@fortawesome/free-solid-svg-icons";
+import { useAuth } from "@/lib/useAuth";
 
 export default function MePage() {
-  const [voterId, setVoterId] = useState("");
+  const { voterId } = useAuth();
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    let id = localStorage.getItem("voterId");
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem("voterId", id);
-    }
-    setVoterId(id);
-  }, []);
 
   useEffect(() => {
     if (!voterId) return;

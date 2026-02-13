@@ -8,30 +8,22 @@ import { fetchActiveTreeMeta, fetchOption } from "@/lib/tree.client";
 import { faHeart, faCheckToSlot, faComment, faShare } from "@fortawesome/free-solid-svg-icons";
 import { ActionRail } from "@/components/ActionRail";
 import { CommentBottomSheet } from "@/components/CommentBottomSheet";
+import { useAuth } from "@/lib/useAuth";
 
 export default function OptionPage() {
   const params = useParams<{ optionId: string }>();
   const optionId = params.optionId;
+  const { voterId } = useAuth();
 
   const [treeId, setTreeId] = useState("");
   const [treeVersion, setTreeVersion] = useState("");
   const [option, setOption] = useState<Option | null>(null);
-  const [voterId, setVoterId] = useState<string | null>(null);
 
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [voted, setVoted] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const [commentModalOpen, setCommentModalOpen] = useState(false);
-
-  useEffect(() => {
-    let id = localStorage.getItem("voterId");
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem("voterId", id);
-    }
-    setVoterId(id);
-  }, []);
 
   useEffect(() => {
     fetchActiveTreeMeta().then((m) => {

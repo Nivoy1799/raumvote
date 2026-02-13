@@ -10,11 +10,13 @@ import { useSwipeChoice } from "@/lib/useSwipeChoice";
 import { faHeart, faComment, faShare, faCheckToSlot } from "@fortawesome/free-solid-svg-icons";
 import { ActionRail } from "@/components/ActionRail";
 import { CommentBottomSheet } from "@/components/CommentBottomSheet";
+import { useAuth } from "@/lib/useAuth";
 
 export default function NodePage() {
     const router = useRouter();
     const params = useParams<{ nodeId: string }>();
     const sp = useSearchParams();
+    const { voterId } = useAuth();
 
     const [treeId, setTreeId] = useState(sp.get("t") ?? "");
     const [treeVersion, setTreeVersion] = useState(sp.get("v") ?? "");
@@ -22,8 +24,6 @@ export default function NodePage() {
     const [node, setNode] = useState<Node | null>(null);
     const [leftOption, setLeftOption] = useState<Option | null>(null);
     const [rightOption, setRightOption] = useState<Option | null>(null);
-
-    const [voterId, setVoterId] = useState<string | null>(null);
 
     const [likedLeft, setLikedLeft] = useState(false);
     const [likedRight, setLikedRight] = useState(false);
@@ -36,16 +36,6 @@ export default function NodePage() {
     const [commentModalOptionId, setCommentModalOptionId] = useState<string | null>(null);
 
     const nodeId = params.nodeId;
-
-    // voterId
-    useEffect(() => {
-        let id = localStorage.getItem("voterId");
-        if (!id) {
-            id = crypto.randomUUID();
-            localStorage.setItem("voterId", id);
-        }
-        setVoterId(id);
-    }, []);
 
     // ensure meta
     useEffect(() => {
@@ -199,7 +189,7 @@ export default function NodePage() {
 
                 <section style={s.split}>
                     {/* LEFT */}
-                    <button style={s.half} onClick={() => navigate(leftOption)}>
+                    <div role="button" tabIndex={0} style={s.half} onClick={() => navigate(leftOption)}>
                         <Image
                             src={leftOption.mediaUrl}
                             alt={leftOption.title}
@@ -223,12 +213,12 @@ export default function NodePage() {
                                 ]} />
                             </div>
                         </div>
-                    </button>
+                    </div>
 
                     <div style={s.divider} />
 
                     {/* RIGHT */}
-                    <button style={s.half} onClick={() => navigate(rightOption)}>
+                    <div role="button" tabIndex={0} style={s.half} onClick={() => navigate(rightOption)}>
                         <Image
                             src={rightOption.mediaUrl}
                             alt={rightOption.title}
@@ -252,7 +242,7 @@ export default function NodePage() {
                                 ]} />
                             </div>
                         </div>
-                    </button>
+                    </div>
                 </section>
             </div>
 
@@ -306,7 +296,7 @@ const s: Record<string, React.CSSProperties> = {
         gridTemplateColumns: "1fr 2px 1fr",
     },
 
-    half: { position: "relative", border: "none", background: "transparent", overflow: "hidden" },
+    half: { position: "relative", border: "none", background: "transparent", overflow: "hidden", cursor: "pointer" },
     divider: {
         width: 1,
         background: "rgba(255,255,255,0.08)",
