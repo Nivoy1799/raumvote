@@ -1,0 +1,92 @@
+"use client";
+
+import { useState, useEffect } from "react";
+
+export type Breakpoint = "small" | "medium" | "large";
+
+export interface ResponsiveValues {
+  breakpoint: Breakpoint;
+  isLandscape: boolean;
+  maxWidth: string;
+  tabbarHeight: number;
+  actionRailSize: number;
+  fontSize: {
+    title: number;
+    body: number;
+    button: number;
+    small: number;
+  };
+  spacing: {
+    small: number;
+    medium: number;
+    large: number;
+  };
+  borderRadius: {
+    small: number;
+    medium: number;
+    large: number;
+  };
+}
+
+const CONFIGS: Record<Breakpoint, Omit<ResponsiveValues, "breakpoint" | "isLandscape">> = {
+  small: {
+    maxWidth: "min(560px, 100vw)",
+    tabbarHeight: 64,
+    actionRailSize: 52,
+    fontSize: { title: 19, body: 14, button: 14, small: 12 },
+    spacing: { small: 8, medium: 16, large: 24 },
+    borderRadius: { small: 14, medium: 18, large: 22 },
+  },
+  medium: {
+    maxWidth: "100vw",
+    tabbarHeight: 40,
+    actionRailSize: 36,
+    fontSize: { title: 15, body: 12, button: 12, small: 10 },
+    spacing: { small: 4, medium: 8, large: 14 },
+    borderRadius: { small: 10, medium: 14, large: 18 },
+  },
+  large: {
+    maxWidth: "min(1400px, 100vw)",
+    tabbarHeight: 80,
+    actionRailSize: 70,
+    fontSize: { title: 28, body: 18, button: 18, small: 14 },
+    spacing: { small: 12, medium: 24, large: 36 },
+    borderRadius: { small: 18, medium: 24, large: 32 },
+  },
+};
+
+function detect(w: number, h: number): { breakpoint: Breakpoint; isLandscape: boolean } {
+  const isLandscape = w > h;
+  if (w >= 1080) return { breakpoint: "large", isLandscape };
+  if (isLandscape && h < 500 && w >= 560) return { breakpoint: "medium", isLandscape };
+  return { breakpoint: "small", isLandscape };
+}
+
+export function useResponsive(): ResponsiveValues {
+  const [values, setValues] = useState<ResponsiveValues>(() => {
+    if (typeof window === "undefined") {
+      return { breakpoint: "small", isLandscape: false, ...CONFIGS.small };
+    }
+    const { breakpoint, isLandscape } = detect(window.innerWidth, window.innerHeight);
+    return { breakpoint, isLandscape, ...CONFIGS[breakpoint] };
+  });
+
+  useEffect(() => {
+    function update() {
+      const { breakpoint, isLandscape } = detect(window.innerWidth, window.innerHeight);
+      setValues((prev) => {
+        if (prev.breakpoint === breakpoint && prev.isLandscape === isLandscape) return prev;
+        return { breakpoint, isLandscape, ...CONFIGS[breakpoint] };
+      });
+    }
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, []);
+
+  return values;
+}

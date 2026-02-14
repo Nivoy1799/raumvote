@@ -11,12 +11,16 @@ import { faHeart, faComment, faShare, faCheckToSlot } from "@fortawesome/free-so
 import { ActionRail } from "@/components/ActionRail";
 import { CommentBottomSheet } from "@/components/CommentBottomSheet";
 import { useAuth } from "@/lib/useAuth";
+import { useSession } from "@/lib/useSession";
+import { useResponsive } from "@/lib/useResponsive";
 
 export default function NodePage() {
     const router = useRouter();
     const params = useParams<{ nodeId: string }>();
     const sp = useSearchParams();
     const { voterId } = useAuth();
+    const { isOpen } = useSession();
+    const r = useResponsive();
 
     const [treeId, setTreeId] = useState(sp.get("t") ?? "");
     const [treeVersion, setTreeVersion] = useState(sp.get("v") ?? "");
@@ -37,23 +41,17 @@ export default function NodePage() {
 
     const nodeId = params.nodeId;
 
-    // ensure meta
     useEffect(() => {
         if (treeId && treeVersion) return;
-
         fetchActiveTreeMeta().then((meta) => {
             setTreeId(meta.treeId);
             setTreeVersion(meta.version);
-            router.replace(
-                `/n/${nodeId}?t=${meta.treeId}&v=${meta.version}`
-            );
+            router.replace(`/n/${nodeId}?t=${meta.treeId}&v=${meta.version}`);
         });
     }, [treeId, treeVersion, nodeId, router]);
 
-    // load node + options
     useEffect(() => {
         if (!treeId) return;
-
         fetchNode(treeId, nodeId).then((n) => {
             setNode(n);
             fetchOption(treeId, n.leftOptionId).then(setLeftOption);
@@ -63,7 +61,6 @@ export default function NodePage() {
 
     useEffect(() => {
         if (!treeId || !treeVersion || !voterId || !leftOption || !rightOption) return;
-
         (async () => {
             const [l1, l2, v, c1, c2, cc1, cc2] = await Promise.all([
                 fetch(`/api/like/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(leftOption.id)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
@@ -74,7 +71,6 @@ export default function NodePage() {
                 fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(leftOption.id)}`).then(r => r.json()),
                 fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(rightOption.id)}`).then(r => r.json()),
             ]);
-
             setLikedLeft(!!l1.liked);
             setLikedRight(!!l2.liked);
             setLikeCountLeft(c1.count ?? 0);
@@ -85,33 +81,26 @@ export default function NodePage() {
         })();
     }, [treeId, treeVersion, voterId, leftOption, rightOption]);
 
-
     async function vote(optionId: string) {
         if (!voterId) return;
-
         const res = await fetch("/api/vote", {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ treeId, treeVersion, voterId, optionId }),
         });
-
         const data = await res.json().catch(() => null);
         if (data?.ok) setVotedOptionId(data.optionId ?? null);
     }
 
-
     async function toggleLike(optionId: string) {
         if (!voterId) return;
-
         const res = await fetch("/api/like", {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ treeId, treeVersion, voterId, optionId }),
         });
-
         const data = await res.json().catch(() => null);
         if (data?.liked === undefined) return;
-
         if (leftOption?.id === optionId) {
             setLikedLeft(!!data.liked);
             setLikeCountLeft((c) => c + (data.liked ? 1 : -1));
@@ -121,7 +110,6 @@ export default function NodePage() {
             setLikeCountRight((c) => c + (data.liked ? 1 : -1));
         }
     }
-
 
     function openComments(optionId: string) {
         setCommentModalOptionId(optionId);
@@ -151,9 +139,7 @@ export default function NodePage() {
 
     function navigate(option: Option) {
         if (option.nextNodeId) {
-            router.push(
-                `/n/${option.nextNodeId}?t=${treeId}&v=${treeVersion}`
-            );
+            router.push(`/n/${option.nextNodeId}?t=${treeId}&v=${treeVersion}`);
         } else if (option.isEnd) {
             router.push(`/o/${option.id}`);
         }
@@ -175,37 +161,84 @@ export default function NodePage() {
         );
     }
 
+    const isMed = r.breakpoint === "medium";
+
+    const styles = {
+        shell: {
+            position: "fixed" as const,
+            inset: 0,
+            background: "black",
+            display: "grid",
+            placeItems: "center",
+            overflow: "hidden",
+            zIndex: 1,
+        },
+        frame: {
+            position: "relative" as const,
+            width: r.maxWidth,
+            height: "100%",
+            overflow: "hidden",
+        },
+        top: {
+            position: "absolute" as const,
+            top: 0,
+            left: 0,
+            right: 0,
+            padding: isMed ? 10 : r.spacing.medium,
+            zIndex: 5,
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)",
+            color: "white",
+        },
+        split: {
+            position: "absolute" as const,
+            inset: 0,
+            display: "grid",
+            gridTemplateColumns: "1fr 2px 1fr",
+        },
+        half: {
+            position: "relative" as const,
+            border: "none",
+            background: "transparent",
+            overflow: "hidden",
+            cursor: "pointer",
+        },
+        overlay: {
+            position: "absolute" as const,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            padding: isMed ? 8 : r.spacing.medium,
+            paddingBottom: r.tabbarHeight + (isMed ? 8 : 18),
+            color: "white",
+            background: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 100%)",
+        },
+    };
+
     return (
-        <main style={s.shell}>
-            <div style={s.frame} {...swipe.bind()}>
-                <header style={s.top}>
+        <main style={styles.shell}>
+            <div style={styles.frame} {...swipe.bind()}>
+                <header style={styles.top}>
                     <div>
-                        <div style={s.context}>
+                        <div style={{ fontSize: r.fontSize.small, opacity: 0.7 }}>
                             RaumVote • {treeId} • {treeVersion}
                         </div>
-                        <div style={s.question}>{node.question}</div>
+                        <div style={{ fontSize: r.fontSize.button, fontWeight: 900 }}>{node.question}</div>
                     </div>
                 </header>
 
-                <section style={s.split}>
+                <section style={styles.split}>
                     {/* LEFT */}
-                    <div role="button" tabIndex={0} style={s.half} onClick={() => navigate(leftOption)}>
-                        <Image
-                            src={leftOption.mediaUrl}
-                            alt={leftOption.title}
-                            fill
-                            priority
-                            style={{ objectFit: "cover" }}
-                        />
-                        <div style={s.overlay}>
-                            <div style={s.overlayInner}>
+                    <div role="button" tabIndex={0} style={styles.half} onClick={() => navigate(leftOption)}>
+                        <Image src={leftOption.mediaUrl} alt={leftOption.title} fill priority style={{ objectFit: "cover" }} />
+                        <div style={styles.overlay}>
+                            <div style={{ display: "flex", alignItems: "flex-end", gap: r.spacing.small }}>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={s.title}>{leftOption.title}</div>
+                                    <div style={{ fontSize: r.fontSize.title, fontWeight: 900, letterSpacing: -0.3 }}>{leftOption.title}</div>
                                     {leftOption.description && (
-                                        <div style={s.desc}>{leftOption.description}</div>
+                                        <div style={{ fontSize: r.fontSize.body - 1, opacity: 0.8, marginTop: isMed ? 2 : 6 }}>{leftOption.description}</div>
                                     )}
                                 </div>
-                                <ActionRail items={[
+                                <ActionRail disabled={!isOpen} items={[
                                     { icon: faHeart, active: likedLeft, count: likeCountLeft, onClick: () => toggleLike(leftOption.id) },
                                     { icon: faCheckToSlot, active: votedOptionId === leftOption.id, activeColor: "#60a5fa", onClick: () => vote(leftOption.id) },
                                     { icon: faComment, count: commentCountLeft, onClick: () => openComments(leftOption.id) },
@@ -215,26 +248,20 @@ export default function NodePage() {
                         </div>
                     </div>
 
-                    <div style={s.divider} />
+                    <div style={{ width: 1, background: "rgba(255,255,255,0.08)" }} />
 
                     {/* RIGHT */}
-                    <div role="button" tabIndex={0} style={s.half} onClick={() => navigate(rightOption)}>
-                        <Image
-                            src={rightOption.mediaUrl}
-                            alt={rightOption.title}
-                            fill
-                            priority
-                            style={{ objectFit: "cover" }}
-                        />
-                        <div style={s.overlay}>
-                            <div style={s.overlayInner}>
+                    <div role="button" tabIndex={0} style={styles.half} onClick={() => navigate(rightOption)}>
+                        <Image src={rightOption.mediaUrl} alt={rightOption.title} fill priority style={{ objectFit: "cover" }} />
+                        <div style={styles.overlay}>
+                            <div style={{ display: "flex", alignItems: "flex-end", gap: r.spacing.small }}>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={s.title}>{rightOption.title}</div>
+                                    <div style={{ fontSize: r.fontSize.title, fontWeight: 900, letterSpacing: -0.3 }}>{rightOption.title}</div>
                                     {rightOption.description && (
-                                        <div style={s.desc}>{rightOption.description}</div>
+                                        <div style={{ fontSize: r.fontSize.body - 1, opacity: 0.8, marginTop: isMed ? 2 : 6 }}>{rightOption.description}</div>
                                     )}
                                 </div>
-                                <ActionRail items={[
+                                <ActionRail disabled={!isOpen} items={[
                                     { icon: faHeart, active: likedRight, count: likeCountRight, onClick: () => toggleLike(rightOption.id) },
                                     { icon: faCheckToSlot, active: votedOptionId === rightOption.id, activeColor: "#60a5fa", onClick: () => vote(rightOption.id) },
                                     { icon: faComment, count: commentCountRight, onClick: () => openComments(rightOption.id) },
@@ -254,80 +281,9 @@ export default function NodePage() {
                     treeVersion={treeVersion}
                     optionId={commentModalOptionId}
                     voterId={voterId}
+                    readOnly={!isOpen}
                 />
             )}
         </main>
     );
 }
-
-
-const TABBAR_HEIGHT = 64;
-
-const s: Record<string, React.CSSProperties> = {
-    shell: {
-        position: "fixed",
-        inset: 0,
-        background: "black",
-        display: "grid",
-        placeItems: "center",
-        overflow: "hidden",
-        zIndex: 1,
-    },
-    frame: { position: "relative", width: "min(560px, 100vw)", height: "100%", overflow: "hidden" },
-
-    top: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        padding: 16,
-        zIndex: 5,
-        background: "linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)",
-        color: "white",
-    },
-
-    context: { fontSize: 12, opacity: 0.7 },
-    question: { fontSize: 16, fontWeight: 900 },
-
-    split: {
-        position: "absolute",
-        inset: 0,
-        display: "grid",
-        gridTemplateColumns: "1fr 2px 1fr",
-    },
-
-    half: { position: "relative", border: "none", background: "transparent", overflow: "hidden", cursor: "pointer" },
-    divider: {
-        width: 1,
-        background: "rgba(255,255,255,0.08)",
-    },
-
-
-
-    overlay: {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        padding: 16,
-        paddingBottom: TABBAR_HEIGHT + 18,
-        color: "white",
-        background:
-            "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 100%)",
-
-    },
-
-    title: {
-        fontSize: 19,
-        fontWeight: 900,
-        letterSpacing: -0.3,
-    },
-
-    desc: { fontSize: 13, opacity: 0.8, marginTop: 6 },
-
-    overlayInner: {
-        display: "flex",
-        alignItems: "flex-end",
-        gap: 8,
-    },
-};

@@ -4,9 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faCamera } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/lib/useAuth";
+import { useResponsive } from "@/lib/useResponsive";
 
 export default function MePage() {
   const { voterId } = useAuth();
+  const r = useResponsive();
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -65,32 +67,35 @@ export default function MePage() {
     }
   }
 
-  return (
-    <main style={s.shell}>
-      <div style={s.container}>
-        <div style={s.h1}>Profil</div>
-        <div style={s.sub}>Gespeichert wird nur ein Hash deiner lokalen ID (keine UUID in der DB).</div>
+  const isLrg = r.breakpoint === "large";
+  const avatarSize = isLrg ? 120 : 80;
 
-        <section style={s.card}>
-          <div style={s.avatarRow}>
-            <button style={s.avatarWrap} onClick={() => fileRef.current?.click()}>
+  return (
+    <main style={{ position: "fixed", inset: 0, background: "black", color: "white", overflow: "auto", zIndex: 1 }}>
+      <div style={{ width: r.maxWidth, margin: "0 auto", padding: `${r.spacing.medium + 2}px ${r.spacing.medium}px ${r.tabbarHeight + r.spacing.large}px` }}>
+        <div style={{ fontSize: r.fontSize.title + 3, fontWeight: 950, letterSpacing: -0.3 }}>Profil</div>
+        <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginTop: 6, lineHeight: 1.35 }}>Gespeichert wird nur ein Hash deiner lokalen ID (keine UUID in der DB).</div>
+
+        <section style={{ marginTop: r.spacing.medium, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)", borderRadius: r.borderRadius.medium, padding: r.spacing.medium, backdropFilter: "blur(14px)" }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: r.spacing.medium }}>
+            <button style={{ position: "relative" as const, width: avatarSize, height: avatarSize, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "2px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "visible", cursor: "pointer", padding: 0, color: "white" }} onClick={() => fileRef.current?.click()}>
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" style={s.avatarImg} />
+                <img src={avatarUrl} alt="Avatar" style={{ width: avatarSize, height: avatarSize, borderRadius: "50%", objectFit: "cover" as const }} />
               ) : (
-                <FontAwesomeIcon icon={faUser} style={{ fontSize: 32, color: "rgba(255,255,255,0.4)" }} />
+                <FontAwesomeIcon icon={faUser} style={{ fontSize: isLrg ? 48 : 32, color: "rgba(255,255,255,0.4)" }} />
               )}
-              <div style={s.cameraBadge}>
-                <FontAwesomeIcon icon={faCamera} style={{ fontSize: 11 }} />
+              <div style={{ position: "absolute" as const, bottom: -2, right: -2, width: isLrg ? 34 : 26, height: isLrg ? 34 : 26, borderRadius: "50%", background: "rgba(96,165,250,0.9)", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid black" }}>
+                <FontAwesomeIcon icon={faCamera} style={{ fontSize: isLrg ? 14 : 11 }} />
               </div>
             </button>
             <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
           </div>
 
-          <div style={s.label}>Deine lokale ID</div>
-          <div style={s.idRow}>
-            <code style={s.code}>{maskedId || "—"}</code>
+          <div style={{ fontSize: r.fontSize.small, opacity: 0.75, fontWeight: 850 }}>Deine lokale ID</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 8 }}>
+            <code style={{ display: "inline-flex", padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(0,0,0,0.35)", color: "rgba(255,255,255,0.9)", fontSize: r.fontSize.small, overflow: "hidden" }}>{maskedId || "—"}</code>
             <button
-              style={s.iconBtn}
+              style={{ width: isLrg ? 48 : 40, height: isLrg ? 48 : 40, borderRadius: r.borderRadius.small, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.06)", color: "white", cursor: "pointer", fontWeight: 900, fontSize: r.fontSize.body }}
               onClick={async () => voterId && navigator.clipboard.writeText(voterId)}
               aria-label="Copy voterId"
               title="Copy"
@@ -99,121 +104,26 @@ export default function MePage() {
             </button>
           </div>
 
-          <div style={{ height: 14 }} />
+          <div style={{ height: r.spacing.medium }} />
 
-          <label style={s.label}>Username</label>
+          <label style={{ fontSize: r.fontSize.small, opacity: 0.75, fontWeight: 850 }}>Username</label>
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="z.B. Liam_14"
             maxLength={24}
-            style={s.input}
+            style={{ marginTop: 8, width: "100%", padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.35)", color: "white", outline: "none", fontSize: r.fontSize.body, fontWeight: 750 }}
             disabled={loading}
           />
 
-          <div style={s.actions}>
-            <button style={s.btn} onClick={save} disabled={!voterId || loading}>
+          <div style={{ marginTop: r.spacing.medium, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const }}>
+            <button style={{ border: "1px solid rgba(255,255,255,0.16)", background: "rgba(255,255,255,0.10)", color: "white", padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, cursor: "pointer", fontWeight: 900, fontSize: r.fontSize.body }} onClick={save} disabled={!voterId || loading}>
               Speichern
             </button>
-            {saved && <div style={s.ok}>Saved ✓</div>}
+            {saved && <div style={{ fontSize: r.fontSize.small, opacity: 0.85 }}>Saved ✓</div>}
           </div>
         </section>
       </div>
     </main>
   );
 }
-
-const s: Record<string, React.CSSProperties> = {
-  shell: { position: "fixed", inset: 0, background: "black", color: "white", overflow: "hidden", zIndex: 1 },
-  container: { width: "min(560px, 100vw)", margin: "0 auto", padding: "18px 14px 110px" },
-  h1: { fontSize: 22, fontWeight: 950, letterSpacing: -0.3 },
-  sub: { fontSize: 12, opacity: 0.7, marginTop: 6, lineHeight: 1.35 },
-
-  avatarRow: { display: "flex", justifyContent: "center", marginBottom: 14 },
-  avatarWrap: {
-    position: "relative" as const,
-    width: 80,
-    height: 80,
-    borderRadius: "50%",
-    background: "rgba(255,255,255,0.08)",
-    border: "2px solid rgba(255,255,255,0.15)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "visible",
-    cursor: "pointer",
-    padding: 0,
-    color: "white",
-  },
-  avatarImg: { width: 80, height: 80, borderRadius: "50%", objectFit: "cover" as const },
-  cameraBadge: {
-    position: "absolute" as const,
-    bottom: -2,
-    right: -2,
-    width: 26,
-    height: 26,
-    borderRadius: "50%",
-    background: "rgba(96,165,250,0.9)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    border: "2px solid black",
-  },
-
-  card: {
-    marginTop: 14,
-    border: "1px solid rgba(255,255,255,0.10)",
-    background: "rgba(255,255,255,0.04)",
-    borderRadius: 18,
-    padding: 14,
-    backdropFilter: "blur(14px)",
-  },
-
-  label: { fontSize: 12, opacity: 0.75, fontWeight: 850 },
-  idRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 8 },
-  code: {
-    display: "inline-flex",
-    padding: "10px 12px",
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.10)",
-    background: "rgba(0,0,0,0.35)",
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 12,
-    overflow: "hidden",
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.10)",
-    background: "rgba(255,255,255,0.06)",
-    color: "white",
-    cursor: "pointer",
-    fontWeight: 900,
-  },
-
-  input: {
-    marginTop: 8,
-    width: "100%",
-    padding: "12px 12px",
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(0,0,0,0.35)",
-    color: "white",
-    outline: "none",
-    fontSize: 14,
-    fontWeight: 750,
-  },
-
-  actions: { marginTop: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" },
-  btn: {
-    border: "1px solid rgba(255,255,255,0.16)",
-    background: "rgba(255,255,255,0.10)",
-    color: "white",
-    padding: "10px 12px",
-    borderRadius: 14,
-    cursor: "pointer",
-    fontWeight: 900,
-  },
-  ok: { fontSize: 12, opacity: 0.85 },
-};

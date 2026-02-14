@@ -48,11 +48,15 @@ model Comment {
   optionId    String
   voterHash   String
   text        String        @db.Text
+  parentId    String?
+  parent      Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[]     @relation("CommentReplies")
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   likes       CommentLike[]
 
   @@index([treeId, treeVersion, optionId, createdAt])
+  @@index([parentId])
 }
 
 model CommentLike {
@@ -71,5 +75,18 @@ model AccessToken {
   label     String?
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
+}
+
+model VotingSession {
+  id           String    @id @default(cuid())
+  treeId       String
+  treeVersion  String
+  title        String?
+  status       String    @default("draft") // draft | active | finished | cancelled
+  durationDays Int       @default(30)
+  startedAt    DateTime?
+  endedAt      DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 

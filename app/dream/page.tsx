@@ -8,10 +8,12 @@ import { fetchActiveTreeMeta, fetchOption } from "@/lib/tree.client";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faShare } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/lib/useAuth";
+import { useResponsive } from "@/lib/useResponsive";
 
 export default function DreamPage() {
   const router = useRouter();
   const { voterId } = useAuth();
+  const r = useResponsive();
 
   const [treeId, setTreeId] = useState<string>("");
   const [treeVersion, setTreeVersion] = useState<string>("");
@@ -70,45 +72,48 @@ export default function DreamPage() {
     }
   }
 
+  const isMed = r.breakpoint === "medium";
+  const isLrg = r.breakpoint === "large";
+
   return (
-    <main style={s.shell}>
-      <header style={s.header}>
-        <div style={s.headerTitle}>Your dream</div>
+    <main style={{ position: "fixed", inset: 0, background: "black", color: "white", display: "grid", gridTemplateRows: `${isMed ? 48 : 64}px 1fr`, overflow: "hidden", zIndex: 1 }}>
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: `0 ${r.spacing.medium}px`, background: "linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0))" }}>
+        <div style={{ fontWeight: 900, letterSpacing: -0.2, fontSize: r.fontSize.button }}>{"\u200B"}Your dream</div>
       </header>
 
       {loading ? (
-        <div style={s.center}>Loading…</div>
+        <div style={{ display: "grid", placeItems: "center", padding: r.spacing.medium, textAlign: "center" as const }}>Loading…</div>
       ) : !option ? (
-        <div style={s.center}>
-          <div style={s.emptyTitle}>No vote yet</div>
-          <div style={s.emptyText}>Pick an option in the split view — then it’ll show up here.</div>
-          <button style={s.cta} onClick={() => router.push("/start")}>Start</button>
+        <div style={{ display: "grid", placeItems: "center", padding: r.spacing.medium, textAlign: "center" as const, gap: 10 }}>
+          <div style={{ fontSize: r.fontSize.body + 4, fontWeight: 900 }}>No vote yet</div>
+          <div style={{ fontSize: r.fontSize.body - 1, opacity: 0.75, maxWidth: isLrg ? 500 : 360 }}>Pick an option in the split view — then it'll show up here.</div>
+          <button style={{ marginTop: 10, border: "1px solid rgba(255,255,255,0.16)", background: "rgba(255,255,255,0.10)", color: "white", padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, cursor: "pointer", fontWeight: 800, fontSize: r.fontSize.body }} onClick={() => router.push("/start")}>Start</button>
         </div>
       ) : (
-        <section style={s.card}>
-          <div style={s.media}>
+        <section style={{ justifySelf: "center", width: r.maxWidth, padding: r.spacing.medium, paddingBottom: r.tabbarHeight + r.spacing.large, overflow: "auto", display: "flex", flexDirection: isMed ? "row" as const : "column" as const, minHeight: 0, gap: isMed ? r.spacing.medium : 0 }}>
+          <div style={{ position: "relative", width: isMed ? "40%" : "100%", aspectRatio: isMed ? "1" : "4 / 5", maxHeight: isMed ? "none" : (isLrg ? "min(600px, 50dvh)" : "min(420px, 45dvh)"), borderRadius: r.borderRadius.large, overflow: "hidden", flexShrink: isMed ? 0 : 1 }}>
             <Image src={option.mediaUrl} alt={option.title} fill priority style={{ objectFit: "cover" }} />
-            <div style={s.mediaShade} />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.0) 55%)" }} />
           </div>
 
-          <div style={s.content}>
-            <div style={s.kicker}>Your current vote</div>
-            <div style={s.title}>{option.title}</div>
-            {option.description && <div style={s.desc}>{option.description}</div>}
+          <div style={{ marginTop: isMed ? 0 : r.spacing.medium, padding: isMed ? 0 : "0 2px", flex: isMed ? 1 : undefined, minWidth: 0 }}>
+            <div style={{ fontSize: r.fontSize.small, opacity: 0.7 }}>Your current vote</div>
+            <div style={{ fontSize: r.fontSize.title + 3, fontWeight: 950, letterSpacing: -0.4, marginTop: 6 }}>{option.title}</div>
+            {option.description && <div style={{ fontSize: r.fontSize.body, opacity: 0.78, marginTop: 8, lineHeight: 1.35 }}>{option.description}</div>}
 
-            <div style={s.actions}>
-              <button style={s.primary} onClick={share}>
+            <div style={{ display: "grid", gap: 10, marginTop: r.spacing.medium }}>
+              <button style={{ border: "1px solid rgba(255,255,255,0.16)", background: "rgba(255,255,255,0.12)", color: "white", padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.medium, cursor: "pointer", fontWeight: 900, display: "flex", gap: 10, alignItems: "center", justifyContent: "center", fontSize: r.fontSize.body }} onClick={share}>
                 <FontAwesomeIcon icon={faShare} /> Share
               </button>
 
               <button
-                style={s.secondary}
+                style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(0,0,0,0.25)", color: "white", padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.medium, cursor: "pointer", fontWeight: 800, fontSize: r.fontSize.body }}
                 onClick={() => router.push(`/o/${encodeURIComponent(option.id)}`)}
               >
                 Open
               </button>
 
-              <button style={s.secondary} onClick={() => router.push("/start")}>
+              <button style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(0,0,0,0.25)", color: "white", padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.medium, cursor: "pointer", fontWeight: 800, fontSize: r.fontSize.body }} onClick={() => router.push("/start")}>
                 Change vote
               </button>
             </div>
@@ -118,100 +123,3 @@ export default function DreamPage() {
     </main>
   );
 }
-
-const s: Record<string, React.CSSProperties> = {
-  shell: {
-    position: "fixed",
-    inset: 0,
-    background: "black",
-    color: "white",
-    display: "grid",
-    gridTemplateRows: "64px 1fr",
-    overflow: "hidden",
-    zIndex: 1,
-  },
-
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "0 12px",
-    background: "linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0))",
-  },
-  headerTitle: { fontWeight: 900, letterSpacing: -0.2 },
-
-  center: {
-    display: "grid",
-    placeItems: "center",
-    padding: 18,
-    textAlign: "center",
-    gap: 10,
-  },
-  emptyTitle: { fontSize: 18, fontWeight: 900 },
-  emptyText: { fontSize: 13, opacity: 0.75, maxWidth: 360 },
-
-  cta: {
-    marginTop: 10,
-    border: "1px solid rgba(255,255,255,0.16)",
-    background: "rgba(255,255,255,0.10)",
-    color: "white",
-    padding: "10px 14px",
-    borderRadius: 14,
-    cursor: "pointer",
-    fontWeight: 800,
-  },
-
-  card: {
-    justifySelf: "center",
-    width: "min(560px, 100vw)",
-    padding: 12,
-    overflow: "auto",
-    display: "flex",
-    flexDirection: "column",
-    minHeight: 0,
-  },
-
-  media: {
-    position: "relative",
-    width: "100%",
-    aspectRatio: "4 / 5",
-    maxHeight: "min(420px, 45dvh)",
-    borderRadius: 22,
-    overflow: "hidden",
-    flexShrink: 1,
-  },
-  mediaShade: {
-    position: "absolute",
-    inset: 0,
-    background: "linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.0) 55%)",
-  },
-
-  content: { marginTop: 14, padding: "0 2px" },
-  kicker: { fontSize: 12, opacity: 0.7 },
-  title: { fontSize: 22, fontWeight: 950, letterSpacing: -0.4, marginTop: 6 },
-  desc: { fontSize: 14, opacity: 0.78, marginTop: 8, lineHeight: 1.35 },
-
-  actions: { display: "grid", gap: 10, marginTop: 16 },
-  primary: {
-    border: "1px solid rgba(255,255,255,0.16)",
-    background: "rgba(255,255,255,0.12)",
-    color: "white",
-    padding: "12px 14px",
-    borderRadius: 16,
-    cursor: "pointer",
-    fontWeight: 900,
-    display: "flex",
-    gap: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondary: {
-    border: "1px solid rgba(255,255,255,0.10)",
-    background: "rgba(0,0,0,0.25)",
-    color: "white",
-    padding: "12px 14px",
-    borderRadius: 16,
-    cursor: "pointer",
-    fontWeight: 800,
-  },
-};

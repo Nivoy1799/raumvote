@@ -9,11 +9,15 @@ import { faHeart, faCheckToSlot, faComment, faShare } from "@fortawesome/free-so
 import { ActionRail } from "@/components/ActionRail";
 import { CommentBottomSheet } from "@/components/CommentBottomSheet";
 import { useAuth } from "@/lib/useAuth";
+import { useSession } from "@/lib/useSession";
+import { useResponsive } from "@/lib/useResponsive";
 
 export default function OptionPage() {
   const params = useParams<{ optionId: string }>();
   const optionId = params.optionId;
   const { voterId } = useAuth();
+  const { isOpen } = useSession();
+  const r = useResponsive();
 
   const [treeId, setTreeId] = useState("");
   const [treeVersion, setTreeVersion] = useState("");
@@ -37,10 +41,8 @@ export default function OptionPage() {
     fetchOption(treeId, optionId).then(setOption).catch(() => setOption(null));
   }, [treeId, optionId]);
 
-  // load like/vote status
   useEffect(() => {
     if (!treeId || !treeVersion || !voterId || !optionId) return;
-
     (async () => {
       const [ls, lc, vs, cc] = await Promise.all([
         fetch(`/api/like/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(optionId)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
@@ -48,7 +50,6 @@ export default function OptionPage() {
         fetch(`/api/vote/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
         fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(optionId)}`).then(r => r.json()),
       ]);
-
       setLiked(!!ls.liked);
       setLikeCount(lc.count ?? 0);
       setVoted(vs.optionId === optionId);
@@ -97,22 +98,21 @@ export default function OptionPage() {
 
   if (!option) {
     return (
-      <main style={s.shell}>
+      <main style={{ position: "fixed", inset: 0, background: "black", color: "white", zIndex: 1 }}>
         <div style={{ padding: 16 }}>Loading…</div>
       </main>
     );
   }
 
   return (
-    <main style={s.shell}>
-      <div style={s.container}>
-        <div style={s.media}>
+    <main style={{ position: "fixed", inset: 0, background: "black", color: "white", overflow: "hidden", zIndex: 1, display: "grid", placeItems: "center" }}>
+      <div style={{ width: r.maxWidth, height: "100%", display: "flex", flexDirection: "column", padding: r.spacing.medium, paddingBottom: r.tabbarHeight + 16 }}>
+        <div style={{ position: "relative", flex: 1, minHeight: 0, borderRadius: r.borderRadius.large, overflow: "hidden", border: "1px solid rgba(255,255,255,0.10)" }}>
           <Image src={option.mediaUrl} alt={option.title} fill priority style={{ objectFit: "cover" }} />
-          <div style={s.mediaShade} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.0) 60%)" }} />
 
-          {/* Rail inside image, bottom-right */}
-          <div style={s.railWrap}>
-            <ActionRail items={[
+          <div style={{ position: "absolute", right: r.spacing.small + 4, bottom: r.spacing.medium, zIndex: 2 }}>
+            <ActionRail disabled={!isOpen} items={[
               { icon: faHeart, active: liked, count: likeCount, onClick: toggleLike },
               { icon: faCheckToSlot, active: voted, activeColor: "#60a5fa", onClick: vote },
               { icon: faComment, count: commentCount, onClick: () => setCommentModalOpen(true) },
@@ -120,15 +120,16 @@ export default function OptionPage() {
             ]} />
           </div>
 
-          <div style={s.mediaContent}>
-            <div style={s.title}>{option.title}</div>
-            {option.description && <div style={s.desc}>{option.description}</div>}
+          <div style={{ position: "absolute", left: r.spacing.medium, right: r.actionRailSize + r.spacing.large, bottom: r.spacing.medium }}>
+            <div style={{ fontSize: r.fontSize.title + 3, fontWeight: 950, letterSpacing: -0.3 }}>{option.title}</div>
+            {option.description && <div style={{ marginTop: 6, fontSize: r.fontSize.body - 1, opacity: 0.78, lineHeight: 1.35 }}>{option.description}</div>}
           </div>
         </div>
       </div>
       {voterId && (
         <CommentBottomSheet
           isOpen={commentModalOpen}
+          readOnly={!isOpen}
           onClose={() => {
             setCommentModalOpen(false);
             if (treeId && treeVersion) {
@@ -144,53 +145,3 @@ export default function OptionPage() {
     </main>
   );
 }
-
-const s: Record<string, React.CSSProperties> = {
-  shell: {
-    position: "fixed",
-    inset: 0,
-    background: "black",
-    color: "white",
-    overflow: "hidden",
-    zIndex: 1,
-    display: "grid",
-    placeItems: "center",
-  },
-
-  container: {
-    width: "min(560px, 100vw)",
-    height: "100%",
-    display: "flex",
-    flexDirection: "column",
-    padding: 12,
-    paddingBottom: 80,
-  },
-
-  media: {
-    position: "relative",
-    flex: 1,
-    minHeight: 0,
-    borderRadius: 22,
-    overflow: "hidden",
-    border: "1px solid rgba(255,255,255,0.10)",
-  },
-  mediaShade: {
-    position: "absolute",
-    inset: 0,
-    background: "linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.0) 60%)",
-  },
-  mediaContent: {
-    position: "absolute",
-    left: 14,
-    right: 60,
-    bottom: 14,
-  },
-  railWrap: {
-    position: "absolute",
-    right: 10,
-    bottom: 14,
-    zIndex: 2,
-  },
-  title: { fontSize: 22, fontWeight: 950, letterSpacing: -0.3 },
-  desc: { marginTop: 6, fontSize: 13, opacity: 0.78, lineHeight: 1.35 },
-};
