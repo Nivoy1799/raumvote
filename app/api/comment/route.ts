@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashVoterId } from "@/lib/voterHash";
 import { validateToken } from "@/lib/validateToken";
+import { getActiveSession, isSessionOpen } from "@/lib/votingSession";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -36,6 +37,7 @@ export async function GET(req: Request) {
   const formatted = comments.map((c) => ({
     id: c.id,
     text: c.text,
+    parentId: c.parentId,
     username: userMap.get(c.voterHash)?.username || null,
     avatarUrl: userMap.get(c.voterHash)?.avatarUrl || null,
     createdAt: c.createdAt,
@@ -48,7 +50,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { treeId, treeVersion, optionId, voterId, text } = body;
+  const { treeId, treeVersion, optionId, voterId, text, parentId } = body;
 
   if (!treeId || !treeVersion || !optionId || !voterId || !text) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
@@ -58,9 +60,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const session = await getActiveSession();
+  if (!session || !isSessionOpen(session)) {
+    return NextResponse.json({ error: "Voting period closed" }, { status: 403 });
+  }
+
   const trimmed = (text as string).trim();
   if (trimmed.length === 0 || trimmed.length > 500) {
     return NextResponse.json({ error: "Invalid text length" }, { status: 400 });
+  }
+
+  // Validate parentId if provided
+  if (parentId) {
+    const parent = await prisma.comment.findUnique({ where: { id: parentId } });
+    if (!parent) {
+      return NextResponse.json({ error: "Parent comment not found" }, { status: 404 });
+    }
   }
 
   const voterHash = hashVoterId(voterId);
@@ -71,13 +86,21 @@ export async function POST(req: Request) {
   });
 
   const comment = await prisma.comment.create({
-    data: { treeId, treeVersion, optionId, voterHash, text: trimmed },
+    data: {
+      treeId,
+      treeVersion,
+      optionId,
+      voterHash,
+      text: trimmed,
+      parentId: parentId || null,
+    },
   });
 
   return NextResponse.json({
     comment: {
       id: comment.id,
       text: comment.text,
+      parentId: comment.parentId,
       username: user?.username || null,
       avatarUrl: user?.avatarUrl || null,
       createdAt: comment.createdAt,
