@@ -62,6 +62,17 @@ export default function AdminPage() {
   // Image tasks
   const [imageTasks, setImageTasks] = useState<{ id: string; nodeId: string; nodeTitel: string; status: string; error: string | null; imageUrl: string | null; createdAt: string; startedAt: string | null; completedAt: string | null }[]>([]);
   const [imageTaskStats, setImageTaskStats] = useState<{ pending: number; generating: number; completed: number; failed: number }>({ pending: 0, generating: 0, completed: 0, failed: 0 });
+  const [imgPage, setImgPage] = useState(1);
+  const [imgPageSize] = useState(50);
+  const [imgTotal, setImgTotal] = useState(0);
+  const [imgFilterStatus, setImgFilterStatus] = useState("");
+  const [imgFilterTitle, setImgFilterTitle] = useState("");
+
+  // Token filters
+  const [tokenFilterLabel, setTokenFilterLabel] = useState("");
+  const [tokenFilterStatus, setTokenFilterStatus] = useState<"" | "active" | "inactive">("");
+  const [tokenPage, setTokenPage] = useState(1);
+  const [tokenPageSize] = useState(50);
 
   // Admin section navigation
   const [activeSection, setActiveSection] = useState<"session" | "tree" | "images" | "tokens">("session");
@@ -130,7 +141,7 @@ export default function AdminPage() {
     const interval = setInterval(reloadImageTasks, 5000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authed, treeConfig?.treeId]);
+  }, [authed, treeConfig?.treeId, imgPage, imgFilterStatus, imgFilterTitle]);
 
   // Countdown ticker
   useEffect(() => {
@@ -272,11 +283,15 @@ export default function AdminPage() {
   async function reloadImageTasks() {
     const treeId = treeConfig?.treeId;
     if (!treeId) return;
-    const res = await fetch(`/api/admin/image-tasks?treeId=${treeId}`, { headers: headers() });
+    const params = new URLSearchParams({ treeId, page: String(imgPage), pageSize: String(imgPageSize) });
+    if (imgFilterStatus) params.set("status", imgFilterStatus);
+    if (imgFilterTitle) params.set("title", imgFilterTitle);
+    const res = await fetch(`/api/admin/image-tasks?${params}`, { headers: headers() });
     if (res.ok) {
       const data = await res.json();
       setImageTasks(data.tasks ?? []);
       setImageTaskStats(data.stats ?? { pending: 0, generating: 0, completed: 0, failed: 0 });
+      setImgTotal(data.total ?? 0);
     }
   }
 
@@ -925,10 +940,32 @@ export default function AdminPage() {
 
             <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
 
+            {/* Filters */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <input
+                value={imgFilterTitle}
+                onChange={(e) => { setImgFilterTitle(e.target.value); setImgPage(1); }}
+                placeholder="Titel suchen..."
+                style={{ ...s.input, fontSize: 12, padding: "6px 10px", flex: 1, minWidth: 120 }}
+              />
+              <select
+                value={imgFilterStatus}
+                onChange={(e) => { setImgFilterStatus(e.target.value); setImgPage(1); }}
+                style={{ ...s.input, fontSize: 12, padding: "6px 10px", cursor: "pointer" }}
+              >
+                <option value="">Alle Status</option>
+                <option value="pending">Wartend</option>
+                <option value="generating">Generiert...</option>
+                <option value="completed">Fertig</option>
+                <option value="failed">Fehler</option>
+              </select>
+              <span style={{ fontSize: 11, opacity: 0.5 }}>{imgTotal} Einträge</span>
+            </div>
+
             {imageTasks.length === 0 ? (
               <div style={s.muted}>Keine Bildgenerierungs-Aufgaben.</div>
             ) : (
-              <div style={{ display: "grid", gap: 6, maxHeight: 400, overflowY: "auto" }}>
+              <div style={{ display: "grid", gap: 6 }}>
                 {imageTasks.map((task) => {
                   const statusColors: Record<string, string> = {
                     pending: "rgba(255,200,50,0.9)",
@@ -947,6 +984,7 @@ export default function AdminPage() {
                     : task.startedAt
                     ? `${((Date.now() - new Date(task.startedAt).getTime()) / 1000).toFixed(0)}s...`
                     : null;
+                  const lastChanged = task.completedAt || task.startedAt || task.createdAt;
 
                   return (
                     <div key={task.id} style={{
@@ -976,6 +1014,7 @@ export default function AdminPage() {
                         <div style={{ fontSize: 10, display: "flex", gap: 8, alignItems: "center", marginTop: 2 }}>
                           <span style={{ color: statusColors[task.status], fontWeight: 800 }}>{statusLabels[task.status]}</span>
                           {elapsed && <span style={{ opacity: 0.5 }}>{elapsed}</span>}
+                          <span style={{ opacity: 0.4 }}>{new Date(lastChanged).toLocaleString("de", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
                           {task.error && <span style={{ color: "rgba(255,59,92,0.7)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.error.slice(0, 50)}</span>}
                         </div>
                       </div>
@@ -990,6 +1029,29 @@ export default function AdminPage() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {imgTotal > imgPageSize && (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center", marginTop: 10 }}>
+                <button
+                  onClick={() => setImgPage((p) => Math.max(1, p - 1))}
+                  disabled={imgPage <= 1}
+                  style={{ ...s.btnTiny, opacity: imgPage <= 1 ? 0.3 : 1 }}
+                >
+                  &larr;
+                </button>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>
+                  {imgPage} / {Math.ceil(imgTotal / imgPageSize)}
+                </span>
+                <button
+                  onClick={() => setImgPage((p) => Math.min(Math.ceil(imgTotal / imgPageSize), p + 1))}
+                  disabled={imgPage >= Math.ceil(imgTotal / imgPageSize)}
+                  style={{ ...s.btnTiny, opacity: imgPage >= Math.ceil(imgTotal / imgPageSize) ? 0.3 : 1 }}
+                >
+                  &rarr;
+                </button>
               </div>
             )}
 
@@ -1073,43 +1135,98 @@ export default function AdminPage() {
         {/* Token list */}
         <section style={s.card}>
           <div style={s.cardTitle}>Tokens</div>
-          {tokens.length === 0 ? (
-            <div style={s.muted}>Keine Tokens vorhanden.</div>
-          ) : (
-            <div style={{ display: "grid", gap: 8 }}>
-              {tokens.map((t) => (
-                <div key={t.id} style={{ ...s.tokenRow, opacity: t.active ? 1 : 0.5 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={s.tokenLabel}>{t.label || "—"}</div>
-                    <div style={s.tokenCode}>{t.token.slice(0, 8)}...{t.token.slice(-6)}</div>
-                    <div style={s.tokenMeta}>
-                      {t.active ? "Aktiv" : "Gesperrt"} &middot; {new Date(t.createdAt).toLocaleDateString("de")}
+
+          {/* Token filters */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <input
+              value={tokenFilterLabel}
+              onChange={(e) => { setTokenFilterLabel(e.target.value); setTokenPage(1); }}
+              placeholder="Label suchen..."
+              style={{ ...s.input, fontSize: 12, padding: "6px 10px", flex: 1, minWidth: 120 }}
+            />
+            <select
+              value={tokenFilterStatus}
+              onChange={(e) => { setTokenFilterStatus(e.target.value as "" | "active" | "inactive"); setTokenPage(1); }}
+              style={{ ...s.input, fontSize: 12, padding: "6px 10px", cursor: "pointer" }}
+            >
+              <option value="">Alle</option>
+              <option value="active">Aktiv</option>
+              <option value="inactive">Gesperrt</option>
+            </select>
+          </div>
+
+          {(() => {
+            const filtered = tokens.filter((t) => {
+              if (tokenFilterLabel && !(t.label || "").toLowerCase().includes(tokenFilterLabel.toLowerCase()) && !t.token.toLowerCase().includes(tokenFilterLabel.toLowerCase())) return false;
+              if (tokenFilterStatus === "active" && !t.active) return false;
+              if (tokenFilterStatus === "inactive" && t.active) return false;
+              return true;
+            });
+            const totalPages = Math.ceil(filtered.length / tokenPageSize);
+            const paginated = filtered.slice((tokenPage - 1) * tokenPageSize, tokenPage * tokenPageSize);
+
+            return filtered.length === 0 ? (
+              <div style={s.muted}>Keine Tokens gefunden.</div>
+            ) : (
+              <>
+                <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 6 }}>{filtered.length} Tokens</div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {paginated.map((t) => (
+                    <div key={t.id} style={{ ...s.tokenRow, opacity: t.active ? 1 : 0.5 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={s.tokenLabel}>{t.label || "—"}</div>
+                        <div style={s.tokenCode}>{t.token.slice(0, 8)}...{t.token.slice(-6)}</div>
+                        <div style={s.tokenMeta}>
+                          {t.active ? "Aktiv" : "Gesperrt"} &middot; {new Date(t.createdAt).toLocaleDateString("de")}
+                        </div>
+                      </div>
+                      <div style={s.tokenActions}>
+                        <button style={s.btnTiny} onClick={() => copyUrl(t.token)} title="URL kopieren">
+                          Link
+                        </button>
+                        <button style={s.btnTiny} onClick={() => downloadAnleitung(t)} title="Anleitung mit QR herunterladen">
+                          PDF
+                        </button>
+                        <button
+                          style={{ ...s.btnTiny, background: t.active ? "rgba(255,59,92,0.2)" : "rgba(96,165,250,0.2)" }}
+                          onClick={() => toggleActive(t)}
+                        >
+                          {t.active ? "Sperren" : "Aktivieren"}
+                        </button>
+                        <button
+                          style={{ ...s.btnTiny, background: "rgba(255,59,92,0.3)" }}
+                          onClick={() => deleteToken(t)}
+                        >
+                          X
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div style={s.tokenActions}>
-                    <button style={s.btnTiny} onClick={() => copyUrl(t.token)} title="URL kopieren">
-                      Link
-                    </button>
-                    <button style={s.btnTiny} onClick={() => downloadAnleitung(t)} title="Anleitung mit QR herunterladen">
-                      PDF
-                    </button>
-                    <button
-                      style={{ ...s.btnTiny, background: t.active ? "rgba(255,59,92,0.2)" : "rgba(96,165,250,0.2)" }}
-                      onClick={() => toggleActive(t)}
-                    >
-                      {t.active ? "Sperren" : "Aktivieren"}
-                    </button>
-                    <button
-                      style={{ ...s.btnTiny, background: "rgba(255,59,92,0.3)" }}
-                      onClick={() => deleteToken(t)}
-                    >
-                      X
-                    </button>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+                {totalPages > 1 && (
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center", marginTop: 10 }}>
+                    <button
+                      onClick={() => setTokenPage((p) => Math.max(1, p - 1))}
+                      disabled={tokenPage <= 1}
+                      style={{ ...s.btnTiny, opacity: tokenPage <= 1 ? 0.3 : 1 }}
+                    >
+                      &larr;
+                    </button>
+                    <span style={{ fontSize: 12, opacity: 0.7 }}>
+                      {tokenPage} / {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setTokenPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={tokenPage >= totalPages}
+                      style={{ ...s.btnTiny, opacity: tokenPage >= totalPages ? 0.3 : 1 }}
+                    >
+                      &rarr;
+                    </button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </section>
         </>}
       </div>

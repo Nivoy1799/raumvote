@@ -18,30 +18,42 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const treeId = url.searchParams.get("treeId");
-  const limit = Math.min(Number(url.searchParams.get("limit") || "50"), 200);
+  const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
+  const pageSize = Math.min(Math.max(1, Number(url.searchParams.get("pageSize") || "50")), 200);
+  const filterStatus = url.searchParams.get("status") || undefined;
+  const filterTitle = url.searchParams.get("title") || undefined;
 
-  const where = treeId ? { treeId } : {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: any = treeId ? { treeId } : {};
+  if (filterStatus) where.status = filterStatus;
+  if (filterTitle) where.nodeTitel = { contains: filterTitle, mode: "insensitive" };
 
   // Auto-mark tasks stuck in "generating" for >5 minutes as failed
   const stuckCutoff = new Date(Date.now() - 5 * 60 * 1000);
   await prisma.imageTask.updateMany({
     where: {
-      ...where,
+      ...(treeId ? { treeId } : {}),
       status: "generating",
       startedAt: { lt: stuckCutoff },
     },
     data: { status: "failed", error: "Stuck — timed out after 5 minutes", completedAt: new Date() },
   });
 
-  const [tasks, counts] = await Promise.all([
+  const [tasks, total, counts] = await Promise.all([
     prisma.imageTask.findMany({
       where,
-      orderBy: { createdAt: "desc" },
-      take: limit,
+      orderBy: [
+        { completedAt: { sort: "desc", nulls: "last" } },
+        { startedAt: { sort: "desc", nulls: "last" } },
+        { createdAt: "desc" },
+      ],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }),
+    prisma.imageTask.count({ where }),
     prisma.imageTask.groupBy({
       by: ["status"],
-      where,
+      where: treeId ? { treeId } : {},
       _count: true,
     }),
   ]);
@@ -51,7 +63,7 @@ export async function GET(req: Request) {
     stats[c.status as keyof typeof stats] = c._count;
   }
 
-  return NextResponse.json({ tasks, stats });
+  return NextResponse.json({ tasks, stats, total, page, pageSize });
 }
 
 // Retry failed tasks
