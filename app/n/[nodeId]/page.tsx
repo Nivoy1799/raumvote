@@ -137,12 +137,16 @@ export default function NodePage() {
   const [commentCountRight, setCommentCountRight] = useState(0);
   const [commentModalOpen, setCommentModalOpen] = useState(false);
   const [commentModalOptionId, setCommentModalOptionId] = useState<string | null>(null);
-  const [activeCard, setActiveCard] = useState<0 | 1>(0);
+  const [activeCard, setActiveCard] = useState<0 | 1 | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number; axis: "x" | "y" | null } | null>(null);
   const [idleTilt, setIdleTilt] = useState(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showSwipeUpHint, setShowSwipeUpHint] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return (parseInt(localStorage.getItem("rv-swipeup-count") || "0", 10) || 0) < 3;
+  });
 
   // Stable ref for placeholderUrl to avoid dep issues
   const phRef = useRef(placeholderUrl);
@@ -316,12 +320,19 @@ export default function NodePage() {
 
   const isPortrait = r.breakpoint === "small";
 
-  // Idle tilt hint — start after 3s of no interaction
+  // Idle tilt hint — start after 3s of no interaction (only when on a card, not center)
   function resetIdleTimer() {
     setIdleTilt(false);
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    idleTimerRef.current = setTimeout(() => setIdleTilt(true), 3000);
+    if (activeCard !== null) {
+      idleTimerRef.current = setTimeout(() => setIdleTilt(true), 3000);
+    }
   }
+
+  // Reset to center view when navigating to a new node
+  useEffect(() => {
+    setActiveCard(null);
+  }, [nodeId]);
 
   useEffect(() => {
     if (isPortrait && left && right) {
@@ -329,7 +340,7 @@ export default function NodePage() {
     }
     return () => { if (idleTimerRef.current) clearTimeout(idleTimerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPortrait, left?.id, right?.id]);
+  }, [isPortrait, left?.id, right?.id, activeCard]);
 
   // Landscape/large swipe — navigates into child
   const swipe = useSwipeChoice({
@@ -361,11 +372,12 @@ export default function NodePage() {
     }
 
     if (dragStartRef.current.axis === "x") {
-      // Dampen drag at edges (card 0 swiping right, or card 1 swiping left)
       let offset = dx;
+      // Rubber band at hard edges only (card 0 swiping further right, card 1 swiping further left)
       if ((activeCard === 0 && dx > 0) || (activeCard === 1 && dx < 0)) {
-        offset = dx * 0.3; // rubber band effect
+        offset = dx * 0.3;
       }
+      // From center, both directions feel natural — no dampening
       setDragOffset(offset);
     }
   }
@@ -380,9 +392,12 @@ export default function NodePage() {
     setIsDragging(false);
     setDragOffset(0);
 
-    // Vertical swipe up — navigate into subtree
-    if (axis === "y" && dy < -70) {
+    // Vertical swipe up — navigate into subtree (only when on a card)
+    if (axis === "y" && dy < -70 && activeCard !== null) {
       if (left && right) {
+        const count = (parseInt(localStorage.getItem("rv-swipeup-count") || "0", 10) || 0) + 1;
+        localStorage.setItem("rv-swipeup-count", String(count));
+        if (count >= 3) setShowSwipeUpHint(false);
         navigate(activeCard === 0 ? left : right);
       }
       return;
@@ -390,8 +405,15 @@ export default function NodePage() {
 
     // Horizontal swipe — switch card
     if (axis === "x") {
-      if (dx < -50 && activeCard === 0) { setActiveCard(1); resetIdleTimer(); }
-      else if (dx > 50 && activeCard === 1) { setActiveCard(0); resetIdleTimer(); }
+      if (activeCard === null) {
+        // From center: swipe right → card 0 (left option), swipe left → card 1 (right option)
+        if (dx > 40) { setActiveCard(0); resetIdleTimer(); }
+        else if (dx < -40) { setActiveCard(1); resetIdleTimer(); }
+      } else if (activeCard === 0) {
+        if (dx < -50) { setActiveCard(1); resetIdleTimer(); }
+      } else if (activeCard === 1) {
+        if (dx > 50) { setActiveCard(0); resetIdleTimer(); }
+      }
     }
   }
 
@@ -548,20 +570,46 @@ export default function NodePage() {
 
   // ====== PORTRAIT CAROUSEL MODE ======
   if (isPortrait) {
+    // Transform calculation: null=center (50/50), 0=left card, 1=right card
+    const trackGap = 12;
+    const carouselTranslateX =
+      activeCard === null ? `calc(-50% - ${trackGap / 2}px)` :
+      activeCard === 0 ? "0%" :
+      `calc(-100% - ${trackGap}px)`;
+
+    const isFocused = activeCard !== null;
+    const contentOpacity = isFocused ? 1 : 0;
+
     return (
       <main style={styles.shell}>
         <style>{`
           @keyframes rv-tilt-hint {
-            0%, 100% { transform: translateX(calc(${-activeCard * 100}% + 0px)) rotate(0deg); }
-            20% { transform: translateX(calc(${-activeCard * 100}% + 18px)) rotate(0.8deg); }
-            40% { transform: translateX(calc(${-activeCard * 100}% + -14px)) rotate(-0.6deg); }
-            60% { transform: translateX(calc(${-activeCard * 100}% + 8px)) rotate(0.3deg); }
-            80% { transform: translateX(calc(${-activeCard * 100}% + -4px)) rotate(-0.15deg); }
+            0%, 100% { transform: translateX(calc(${activeCard === null ? "-50% - 6px" : `${-(activeCard ?? 0) * 100}%`} + 0px)) rotate(0deg); }
+            20% { transform: translateX(calc(${activeCard === null ? "-50% - 6px" : `${-(activeCard ?? 0) * 100}%`} + 18px)) rotate(0.8deg); }
+            40% { transform: translateX(calc(${activeCard === null ? "-50% - 6px" : `${-(activeCard ?? 0) * 100}%`} + -14px)) rotate(-0.6deg); }
+            60% { transform: translateX(calc(${activeCard === null ? "-50% - 6px" : `${-(activeCard ?? 0) * 100}%`} + 8px)) rotate(0.3deg); }
+            80% { transform: translateX(calc(${activeCard === null ? "-50% - 6px" : `${-(activeCard ?? 0) * 100}%`} + -4px)) rotate(-0.15deg); }
+          }
+          @keyframes rv-swipe-up-hint {
+            0%, 100% { transform: translateY(0); opacity: 0.5; }
+            50% { transform: translateY(-6px); opacity: 0.9; }
+          }
+          @keyframes rv-center-wobble {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-0.3deg); }
+            50% { transform: rotate(0.3deg); }
+            75% { transform: rotate(-0.15deg); }
           }
         `}</style>
         <div style={{ ...styles.frame, touchAction: "none" }} {...carouselBind}>
-          {/* Question header */}
-          <header style={{ ...styles.top, zIndex: 10 }}>
+          {/* Question header — visible when focused */}
+          <header style={{
+            ...styles.top,
+            zIndex: 10,
+            opacity: contentOpacity,
+            transition: "opacity 0.4s ease",
+            pointerEvents: isFocused ? "auto" : "none",
+          }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: r.fontSize.small, opacity: 0.7 }}>
@@ -592,6 +640,26 @@ export default function NodePage() {
             </div>
           </header>
 
+          {/* Center hint — visible only when in 50/50 view */}
+          {!isFocused && (
+            <div style={{
+              position: "absolute",
+              top: 16,
+              left: 0,
+              right: 0,
+              zIndex: 10,
+              textAlign: "center",
+              color: "white",
+              opacity: 0.6,
+              fontSize: r.fontSize.small,
+              fontWeight: 700,
+              letterSpacing: 0.5,
+              pointerEvents: "none",
+            }}>
+              Wische um zu wählen
+            </div>
+          )}
+
           {/* Carousel track */}
           <div style={{
             position: "absolute",
@@ -600,9 +668,9 @@ export default function NodePage() {
             right: 10,
             bottom: 12,
             display: "flex",
-            gap: 12,
-            transform: `translateX(calc(${-activeCard * 100}% + ${isDragging ? dragOffset : 0}px))`,
-            transition: isDragging ? "none" : "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+            gap: trackGap,
+            transform: `translateX(calc(${carouselTranslateX} + ${isDragging ? dragOffset : 0}px))`,
+            transition: isDragging ? "none" : "transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
             animation: idleTilt && !isDragging ? "rv-tilt-hint 1.2s ease-in-out" : undefined,
           }}>
             {options.map((opt, i) => (
@@ -613,11 +681,60 @@ export default function NodePage() {
                 flexShrink: 0,
                 borderRadius: 24,
                 overflow: "hidden",
+                animation: !isFocused && !isDragging ? `rv-center-wobble 3s ease-in-out ${i * 0.4}s infinite` : undefined,
               }}>
                 <Image src={opt.mediaUrl || placeholderUrl} alt={opt.titel} fill priority style={{ objectFit: "cover" }} />
                 {showShimmer && placeholderStates[i] && <ImageShimmer label="Creating" />}
 
-                {/* Bottom overlay */}
+                {/* Swipe-up hint — visible when card is focused, hidden after 3 successful swipes */}
+                {showSwipeUpHint && isFocused && activeCard === i && (
+                  <div style={{
+                    position: "absolute",
+                    top: "32%",
+                    left: 0,
+                    right: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 6,
+                    pointerEvents: "none",
+                    animation: "rv-swipe-up-hint 2.5s ease-in-out infinite",
+                  }}>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.8 }}>
+                      <path d="M12 4l-6 6h4v9h4v-9h4l-6-6z" fill="white" />
+                    </svg>
+                    <span style={{
+                      color: "white",
+                      fontSize: 14,
+                      fontWeight: 800,
+                      opacity: 0.7,
+                      letterSpacing: 0.5,
+                      textShadow: "0 2px 6px rgba(0,0,0,0.7)",
+                    }}>
+                      Vertiefen
+                    </span>
+                  </div>
+                )}
+
+                {/* Title label — always visible as a small tag in center mode */}
+                {!isFocused && (
+                  <div style={{
+                    position: "absolute",
+                    bottom: 16,
+                    left: 12,
+                    right: 12,
+                    textAlign: "center",
+                    color: "white",
+                    fontSize: r.fontSize.body,
+                    fontWeight: 900,
+                    textShadow: "0 2px 8px rgba(0,0,0,0.8)",
+                    pointerEvents: "none",
+                  }}>
+                    {opt.titel}
+                  </div>
+                )}
+
+                {/* Bottom overlay — only visible when card is focused */}
                 <div style={{
                   position: "absolute",
                   left: 0,
@@ -628,6 +745,9 @@ export default function NodePage() {
                   color: "white",
                   background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 100%)",
                   borderRadius: "0 0 24px 24px",
+                  opacity: contentOpacity,
+                  transition: "opacity 0.4s ease",
+                  pointerEvents: isFocused ? "auto" : "none",
                 }}>
                   <div style={{ display: "flex", alignItems: "flex-end", gap: r.spacing.small }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -656,6 +776,8 @@ export default function NodePage() {
             justifyContent: "center",
             gap: 8,
             zIndex: 10,
+            opacity: isFocused ? 1 : 0,
+            transition: "opacity 0.4s ease",
           }}>
             {[0, 1].map((i) => (
               <button
