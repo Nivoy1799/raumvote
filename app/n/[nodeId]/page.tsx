@@ -141,6 +141,8 @@ export default function NodePage() {
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number; axis: "x" | "y" | null } | null>(null);
+  const [idleTilt, setIdleTilt] = useState(false);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Stable ref for placeholderUrl to avoid dep issues
   const phRef = useRef(placeholderUrl);
@@ -314,6 +316,21 @@ export default function NodePage() {
 
   const isPortrait = r.breakpoint === "small";
 
+  // Idle tilt hint — start after 3s of no interaction
+  function resetIdleTimer() {
+    setIdleTilt(false);
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => setIdleTilt(true), 3000);
+  }
+
+  useEffect(() => {
+    if (isPortrait && left && right) {
+      resetIdleTimer();
+    }
+    return () => { if (idleTimerRef.current) clearTimeout(idleTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPortrait, left?.id, right?.id]);
+
   // Landscape/large swipe — navigates into child
   const swipe = useSwipeChoice({
     onChoice: (c) => {
@@ -328,6 +345,7 @@ export default function NodePage() {
     dragStartRef.current = { x: e.clientX, y: e.clientY, axis: null };
     setIsDragging(true);
     setDragOffset(0);
+    resetIdleTimer();
   }
 
   function onCarouselPointerMove(e: React.PointerEvent) {
@@ -372,8 +390,8 @@ export default function NodePage() {
 
     // Horizontal swipe — switch card
     if (axis === "x") {
-      if (dx < -50 && activeCard === 0) setActiveCard(1);
-      else if (dx > 50 && activeCard === 1) setActiveCard(0);
+      if (dx < -50 && activeCard === 0) { setActiveCard(1); resetIdleTimer(); }
+      else if (dx > 50 && activeCard === 1) { setActiveCard(0); resetIdleTimer(); }
     }
   }
 
@@ -532,6 +550,15 @@ export default function NodePage() {
   if (isPortrait) {
     return (
       <main style={styles.shell}>
+        <style>{`
+          @keyframes rv-tilt-hint {
+            0%, 100% { transform: translateX(calc(${-activeCard * 100}% + 0px)) rotate(0deg); }
+            20% { transform: translateX(calc(${-activeCard * 100}% + 18px)) rotate(0.8deg); }
+            40% { transform: translateX(calc(${-activeCard * 100}% + -14px)) rotate(-0.6deg); }
+            60% { transform: translateX(calc(${-activeCard * 100}% + 8px)) rotate(0.3deg); }
+            80% { transform: translateX(calc(${-activeCard * 100}% + -4px)) rotate(-0.15deg); }
+          }
+        `}</style>
         <div style={{ ...styles.frame, touchAction: "none" }} {...carouselBind}>
           {/* Question header */}
           <header style={{ ...styles.top, zIndex: 10 }}>
@@ -568,10 +595,15 @@ export default function NodePage() {
           {/* Carousel track */}
           <div style={{
             position: "absolute",
-            inset: 0,
+            top: 12,
+            left: 10,
+            right: 10,
+            bottom: 12,
             display: "flex",
-            transform: `translateX(calc(${-activeCard * 100}% + ${dragOffset}px))`,
+            gap: 12,
+            transform: `translateX(calc(${-activeCard * 100}% + ${isDragging ? dragOffset : 0}px))`,
             transition: isDragging ? "none" : "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+            animation: idleTilt && !isDragging ? "rv-tilt-hint 1.2s ease-in-out" : undefined,
           }}>
             {options.map((opt, i) => (
               <div key={opt.id} style={{
@@ -579,6 +611,8 @@ export default function NodePage() {
                 width: "100%",
                 height: "100%",
                 flexShrink: 0,
+                borderRadius: 24,
+                overflow: "hidden",
               }}>
                 <Image src={opt.mediaUrl || placeholderUrl} alt={opt.titel} fill priority style={{ objectFit: "cover" }} />
                 {showShimmer && placeholderStates[i] && <ImageShimmer label="Creating" />}
@@ -590,27 +624,15 @@ export default function NodePage() {
                   right: 0,
                   bottom: 0,
                   padding: r.spacing.medium,
-                  paddingBottom: r.tabbarHeight + 18,
+                  paddingBottom: r.tabbarHeight + 6,
                   color: "white",
                   background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 100%)",
+                  borderRadius: "0 0 24px 24px",
                 }}>
                   <div style={{ display: "flex", alignItems: "flex-end", gap: r.spacing.small }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: r.fontSize.title + 2, fontWeight: 900, letterSpacing: -0.3 }}>{opt.titel}</div>
                       <div style={{ fontSize: r.fontSize.body, opacity: 0.8, marginTop: 6 }}>{opt.beschreibung}</div>
-
-                      {/* Swipe up hint */}
-                      <div style={{
-                        marginTop: 14,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        opacity: 0.5,
-                        fontSize: r.fontSize.small,
-                      }}>
-                        <span style={{ fontSize: 16, lineHeight: 1 }}>↑</span>
-                        <span>Nach oben wischen zum Erkunden</span>
-                      </div>
                     </div>
                     <ActionRail disabled={!isOpen} items={[
                       { icon: faHeart, active: likedStates[i], count: likeCounts[i], onClick: () => toggleLike(opt.id) },
