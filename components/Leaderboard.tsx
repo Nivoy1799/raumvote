@@ -2,8 +2,8 @@
 
 import { memo, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Option } from "@/lib/tree.types";
-import { fetchOption } from "@/lib/tree.client";
+import type { TreeNodeData } from "@/lib/tree.types";
+import { fetchSingleNode } from "@/lib/tree.client";
 import { useResponsive } from "@/lib/useResponsive";
 
 type LeaderRow = { optionId: string; count: number };
@@ -25,7 +25,7 @@ export const Leaderboard = memo(function Leaderboard({
   const r = useResponsive();
 
   const [data, setData] = useState<ResultsPayload | null>(null);
-  const [optCache, setOptCache] = useState<Record<string, Option>>({});
+  const [nodeCache, setNodeCache] = useState<Record<string, TreeNodeData>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,23 +48,23 @@ export const Leaderboard = memo(function Leaderboard({
 
     (async () => {
       const ids = data.leaderboard.map((x) => x.optionId);
-      const missing = ids.filter((id) => !optCache[id]);
+      const missing = ids.filter((id) => !nodeCache[id]);
       if (missing.length === 0) return;
 
       const entries = await Promise.all(
         missing.map(async (id) => {
           try {
-            const opt = await fetchOption(data.treeId, id);
-            return [id, opt] as const;
+            const node = await fetchSingleNode(id);
+            return node ? [id, node] as const : null;
           } catch {
             return null;
           }
         })
       );
 
-      const next: Record<string, Option> = {};
+      const next: Record<string, TreeNodeData> = {};
       for (const e of entries) if (e) next[e[0]] = e[1];
-      setOptCache((prev) => ({ ...prev, ...next }));
+      setNodeCache((prev) => ({ ...prev, ...next }));
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
@@ -75,10 +75,10 @@ export const Leaderboard = memo(function Leaderboard({
     if (!data) return [];
     return data.leaderboard.map((r) => ({
       ...r,
-      option: optCache[r.optionId] ?? null,
+      node: nodeCache[r.optionId] ?? null,
       pct: totalVotes ? Math.round((r.count / totalVotes) * 100) : 0,
     }));
-  }, [data, optCache, totalVotes]);
+  }, [data, nodeCache, totalVotes]);
 
   const isLrg = r.breakpoint === "large";
   const btnSize = isLrg ? 44 : 34;
@@ -100,7 +100,7 @@ export const Leaderboard = memo(function Leaderboard({
               <div style={{ fontSize: r.fontSize.small, opacity: 0.75, fontWeight: 900, textAlign: "center" as const }}>{idx + 1}</div>
               <div style={{ minWidth: 0, display: "grid", gap: r.spacing.small }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
-                  <div style={{ fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, fontSize: r.fontSize.body }}>{row.option?.title ?? row.optionId}</div>
+                  <div style={{ fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, fontSize: r.fontSize.body }}>{row.node?.titel ?? row.optionId}</div>
                   <div style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
                     <span style={{ fontWeight: 900, opacity: 0.9, fontSize: r.fontSize.body }}>{row.count}</span>
                     <span style={{ fontWeight: 900, opacity: 0.7, fontSize: r.fontSize.small }}>{row.pct}%</span>

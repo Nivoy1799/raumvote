@@ -63,12 +63,12 @@ function detect(w: number, h: number): { breakpoint: Breakpoint; isLandscape: bo
 }
 
 export function useResponsive(): ResponsiveValues {
-  const [values, setValues] = useState<ResponsiveValues>(() => {
-    if (typeof window === "undefined") {
-      return { breakpoint: "small", isLandscape: false, ...CONFIGS.small };
-    }
-    const { breakpoint, isLandscape } = detect(window.innerWidth, window.innerHeight);
-    return { breakpoint, isLandscape, ...CONFIGS[breakpoint] };
+  // Always start with "small" on both server and client to avoid hydration mismatch.
+  // The useEffect below will immediately correct to the real breakpoint after mount.
+  const [values, setValues] = useState<ResponsiveValues>({
+    breakpoint: "small",
+    isLandscape: false,
+    ...CONFIGS.small,
   });
 
   useEffect(() => {

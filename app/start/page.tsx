@@ -9,7 +9,7 @@ export default function StartPage() {
 
   useEffect(() => {
     fetchActiveTreeMeta()
-      .then((meta) => router.replace(`/n/${encodeURIComponent(meta.startNodeId)}?t=${encodeURIComponent(meta.treeId)}&v=${encodeURIComponent(meta.version)}`))
+      .then((meta) => router.replace(`/n/${encodeURIComponent(meta.rootNodeId)}`))
       .catch(() => router.replace("/error"));
   }, [router]);
 
