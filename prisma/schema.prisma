@@ -118,6 +118,22 @@ model TreeNode {
   @@index([parentId])
 }
 
+model ImageTask {
+  id         String   @id @default(cuid())
+  treeId     String
+  nodeId     String
+  nodeTitel  String
+  status     String   @default("pending") // pending | generating | completed | failed
+  error      String?
+  imageUrl   String?
+  startedAt  DateTime?
+  completedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([treeId, status])
+  @@index([nodeId])
+}
+
 model TreeConfig {
   id             String   @id @default(cuid())
   treeId         String   @unique

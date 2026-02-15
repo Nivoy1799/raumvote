@@ -57,6 +57,10 @@ export default function AdminPage() {
   const [newSystemPrompt, setNewSystemPrompt] = useState("");
   const [treeSaving, setTreeSaving] = useState(false);
 
+  // Image tasks
+  const [imageTasks, setImageTasks] = useState<{ id: string; nodeId: string; nodeTitel: string; status: string; error: string | null; imageUrl: string | null; createdAt: string; startedAt: string | null; completedAt: string | null }[]>([]);
+  const [imageTaskStats, setImageTaskStats] = useState<{ pending: number; generating: number; completed: number; failed: number }>({ pending: 0, generating: 0, completed: 0, failed: 0 });
+
   // Countdown
   const [now, setNow] = useState(Date.now());
 
@@ -113,6 +117,15 @@ export default function AdminPage() {
     reloadTreeConfig();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed]);
+
+  // Load image tasks + auto-refresh when generating
+  useEffect(() => {
+    if (!authed || !treeConfig) return;
+    reloadImageTasks();
+    const interval = setInterval(reloadImageTasks, 5000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, treeConfig?.treeId]);
 
   // Countdown ticker
   useEffect(() => {
@@ -202,6 +215,69 @@ export default function AdminPage() {
       await downloadAnleitung(t);
       await new Promise((r) => setTimeout(r, 300));
     }
+  }
+
+  // --- Image task queue ---
+  async function reloadImageTasks() {
+    const treeId = treeConfig?.treeId;
+    if (!treeId) return;
+    const res = await fetch(`/api/admin/image-tasks?treeId=${treeId}`, { headers: headers() });
+    if (res.ok) {
+      const data = await res.json();
+      setImageTasks(data.tasks ?? []);
+      setImageTaskStats(data.stats ?? { pending: 0, generating: 0, completed: 0, failed: 0 });
+    }
+  }
+
+  async function retryTask(taskId: string) {
+    await fetch("/api/admin/image-tasks", {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ action: "retry", taskId }),
+    });
+    await reloadImageTasks();
+  }
+
+  async function retryAllFailed() {
+    if (!treeConfig) return;
+    setTreeSaving(true);
+    const res = await fetch("/api/admin/image-tasks", {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ action: "retry-all-failed", treeId: treeConfig.treeId }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setError(data?.error ?? "Retry fehlgeschlagen");
+    }
+    await reloadImageTasks();
+    setTreeSaving(false);
+  }
+
+  async function backfillImages() {
+    if (!treeConfig) return;
+    setTreeSaving(true);
+    const res = await fetch("/api/admin/image-tasks", {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ action: "backfill", treeId: treeConfig.treeId }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setError(data?.error ?? "Backfill fehlgeschlagen");
+    }
+    await reloadImageTasks();
+    setTreeSaving(false);
+  }
+
+  async function clearCompletedTasks() {
+    if (!treeConfig) return;
+    await fetch("/api/admin/image-tasks", {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ action: "clear-completed", treeId: treeConfig.treeId }),
+    });
+    await reloadImageTasks();
   }
 
   // --- Tree config actions ---
@@ -738,6 +814,123 @@ export default function AdminPage() {
             </div>
           )}
         </section>
+
+        {/* ===== IMAGE TASK QUEUE ===== */}
+        {treeConfig && (
+          <section style={s.card}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={s.cardTitle}>Bildgenerierung</div>
+              <div style={{ display: "flex", gap: 6, fontSize: 11, fontWeight: 800 }}>
+                {imageTaskStats.generating > 0 && (
+                  <span style={{ color: "rgba(96,165,250,1)", display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(96,165,250,1)", display: "inline-block", animation: "pulse 1.5s infinite" }} />
+                    {imageTaskStats.generating} aktiv
+                  </span>
+                )}
+                {imageTaskStats.pending > 0 && <span style={{ color: "rgba(255,200,50,0.9)" }}>{imageTaskStats.pending} wartend</span>}
+                {imageTaskStats.failed > 0 && <span style={{ color: "rgba(255,59,92,0.9)" }}>{imageTaskStats.failed} fehlgeschlagen</span>}
+                {imageTaskStats.completed > 0 && <span style={{ color: "rgba(52,199,89,0.9)" }}>{imageTaskStats.completed} fertig</span>}
+              </div>
+            </div>
+
+            <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
+
+            {imageTasks.length === 0 ? (
+              <div style={s.muted}>Keine Bildgenerierungs-Aufgaben.</div>
+            ) : (
+              <div style={{ display: "grid", gap: 6, maxHeight: 400, overflowY: "auto" }}>
+                {imageTasks.map((task) => {
+                  const statusColors: Record<string, string> = {
+                    pending: "rgba(255,200,50,0.9)",
+                    generating: "rgba(96,165,250,1)",
+                    completed: "rgba(52,199,89,0.9)",
+                    failed: "rgba(255,59,92,0.9)",
+                  };
+                  const statusLabels: Record<string, string> = {
+                    pending: "Wartend",
+                    generating: "Generiert...",
+                    completed: "Fertig",
+                    failed: "Fehler",
+                  };
+                  const elapsed = task.startedAt && task.completedAt
+                    ? `${((new Date(task.completedAt).getTime() - new Date(task.startedAt).getTime()) / 1000).toFixed(0)}s`
+                    : task.startedAt
+                    ? `${((Date.now() - new Date(task.startedAt).getTime()) / 1000).toFixed(0)}s...`
+                    : null;
+
+                  return (
+                    <div key={task.id} style={{
+                      display: "flex",
+                      gap: 8,
+                      alignItems: "center",
+                      padding: "8px 10px",
+                      borderRadius: 10,
+                      background: "rgba(0,0,0,0.25)",
+                      border: "1px solid rgba(255,255,255,0.06)",
+                    }}>
+                      {task.imageUrl && task.status === "completed" ? (
+                        <img src={task.imageUrl} alt="" style={{ width: 36, height: 36, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
+                      ) : (
+                        <div style={{
+                          width: 36, height: 36, borderRadius: 6, flexShrink: 0,
+                          background: task.status === "generating" ? "rgba(96,165,250,0.15)" : "rgba(255,255,255,0.05)",
+                          display: "grid", placeItems: "center", fontSize: 14,
+                        }}>
+                          {task.status === "generating" ? "..." : task.status === "failed" ? "!" : "~"}
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {task.nodeTitel}
+                        </div>
+                        <div style={{ fontSize: 10, display: "flex", gap: 8, alignItems: "center", marginTop: 2 }}>
+                          <span style={{ color: statusColors[task.status], fontWeight: 800 }}>{statusLabels[task.status]}</span>
+                          {elapsed && <span style={{ opacity: 0.5 }}>{elapsed}</span>}
+                          {task.error && <span style={{ color: "rgba(255,59,92,0.7)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.error.slice(0, 50)}</span>}
+                        </div>
+                      </div>
+                      {task.status === "failed" && (
+                        <button
+                          onClick={() => retryTask(task.id)}
+                          style={{ ...s.btnTiny, background: "rgba(96,165,250,0.2)", flexShrink: 0 }}
+                        >
+                          Retry
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+              <button
+                onClick={backfillImages}
+                disabled={treeSaving}
+                style={{ ...s.btnSmall, background: "rgba(255,200,50,0.15)" }}
+              >
+                Fehlende Bilder generieren
+              </button>
+              {imageTaskStats.failed > 0 && (
+                <button
+                  onClick={retryAllFailed}
+                  disabled={treeSaving}
+                  style={{ ...s.btnSmall, background: "rgba(96,165,250,0.15)" }}
+                >
+                  Alle fehlgeschlagenen wiederholen ({imageTaskStats.failed})
+                </button>
+              )}
+              {imageTaskStats.completed > 0 && (
+                <button
+                  onClick={clearCompletedTasks}
+                  style={{ ...s.btnSmall, opacity: 0.6 }}
+                >
+                  Erledigte löschen ({imageTaskStats.completed})
+                </button>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* ===== TOKEN SECTION ===== */}
         <div style={{ ...s.h1, fontSize: 18, marginTop: 8 }}>Token-Verwaltung</div>

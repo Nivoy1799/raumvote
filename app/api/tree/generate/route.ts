@@ -6,6 +6,7 @@ import { validateToken } from "@/lib/validateToken";
 import { generateTreeNodes } from "@/lib/openai";
 import type { EpisodeStep } from "@/lib/openai";
 import { generateNodeImage, buildImagePrompt } from "@/lib/imageGen";
+import { checkR2Health } from "@/lib/r2";
 
 async function buildEpisode(nodeId: string): Promise<EpisodeStep[]> {
   const path: EpisodeStep[] = [];
@@ -133,8 +134,14 @@ export async function POST(req: Request) {
     };
   });
 
-  // Fire-and-forget image generation (don't block the response)
+  // Fire-and-forget image generation with task tracking (only if R2 is healthy)
   if (result.isDiscoverer && result.left && result.right) {
+    const r2Status = await checkR2Health();
+    if (!r2Status.ok) {
+      console.error("[generate] R2 health check failed, skipping image generation:", r2Status.error);
+      return NextResponse.json(result);
+    }
+    console.log("[generate] R2 is healthy, starting image generation for nodeId =", nodeId);
     const leftId = result.left.id;
     const rightId = result.right.id;
     const leftPrompt = buildImagePrompt(result.left, config.imagePrompt);
@@ -144,17 +151,34 @@ export async function POST(req: Request) {
       imagePrompt: config.imagePrompt,
       referenceMedia: config.referenceMedia,
     };
+
+    // Create task records
+    const [leftTask, rightTask] = await Promise.all([
+      prisma.imageTask.create({ data: { treeId: node.treeId, nodeId: leftId, nodeTitel: result.left.titel, status: "pending" } }),
+      prisma.imageTask.create({ data: { treeId: node.treeId, nodeId: rightId, nodeTitel: result.right.titel, status: "pending" } }),
+    ]);
+
     void (async () => {
-      try {
-        const [leftImg, rightImg] = await Promise.all([
-          generateNodeImage(leftPrompt, leftId, imageConfig),
-          generateNodeImage(rightPrompt, rightId, imageConfig),
-        ]);
-        if (leftImg) await prisma.treeNode.update({ where: { id: leftId }, data: { mediaUrl: leftImg } });
-        if (rightImg) await prisma.treeNode.update({ where: { id: rightId }, data: { mediaUrl: rightImg } });
-      } catch (err) {
-        console.error("[generate] Background image generation failed:", err);
+      async function processTask(taskId: string, nodeIdArg: string, prompt: string) {
+        await prisma.imageTask.update({ where: { id: taskId }, data: { status: "generating", startedAt: new Date() } });
+        try {
+          const imgUrl = await generateNodeImage(prompt, nodeIdArg, imageConfig);
+          if (imgUrl) {
+            await prisma.treeNode.update({ where: { id: nodeIdArg }, data: { mediaUrl: imgUrl } });
+            await prisma.imageTask.update({ where: { id: taskId }, data: { status: "completed", imageUrl: imgUrl, completedAt: new Date() } });
+          } else {
+            await prisma.imageTask.update({ where: { id: taskId }, data: { status: "failed", error: "Generation returned null", completedAt: new Date() } });
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          await prisma.imageTask.update({ where: { id: taskId }, data: { status: "failed", error: msg, completedAt: new Date() } });
+        }
       }
+
+      await Promise.all([
+        processTask(leftTask.id, leftId, leftPrompt),
+        processTask(rightTask.id, rightId, rightPrompt),
+      ]);
     })();
   }
 
