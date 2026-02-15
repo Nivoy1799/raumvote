@@ -1,19 +1,20 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 
 let _s3: S3Client | null = null;
 
 function getS3(): S3Client {
   if (!_s3) {
-    if (!process.env.R2_PUBLIC_URL) {
-      throw new Error("[R2] R2_PUBLIC_URL env var is not set. Expected: https://<account-id>.r2.cloudflarestorage.com");
+    const { R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = process.env;
+    if (!R2_ENDPOINT || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+      throw new Error("[R2] Missing env vars: R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY");
     }
     _s3 = new S3Client({
-      region: "eu-central-1",
-      endpoint: process.env.R2_PUBLIC_URL!,
+      region: "auto",
+      endpoint: R2_ENDPOINT,
       forcePathStyle: true,
       credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+        accessKeyId: R2_ACCESS_KEY_ID,
+        secretAccessKey: R2_SECRET_ACCESS_KEY,
       },
     });
   }
@@ -38,4 +39,28 @@ export async function uploadToR2(
   );
 
   return `${publicUrl}/${key}`;
+}
+
+// Check if R2 is reachable by writing and verifying a tiny probe object
+export async function checkR2Health(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const bucket = process.env.R2_BUCKET_NAME;
+    if (!bucket || !process.env.R2_ENDPOINT) {
+      return { ok: false, error: "R2 env vars not configured" };
+    }
+
+    const probeKey = `_health/${Date.now()}.txt`;
+    await getS3().send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: probeKey,
+        Body: "ok",
+        ContentType: "text/plain",
+      }),
+    );
+    await getS3().send(new HeadObjectCommand({ Bucket: bucket, Key: probeKey }));
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
 }
