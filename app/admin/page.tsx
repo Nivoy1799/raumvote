@@ -40,6 +40,23 @@ export default function AdminPage() {
   const [sessionTreeVersion, setSessionTreeVersion] = useState("");
   const [sessionDuration, setSessionDuration] = useState(30);
 
+  // Tree config
+  const [treeConfig, setTreeConfig] = useState<{ treeId: string; rootNodeId: string | null; systemPrompt: string; modelName: string; title: string | null; discoveryEnabled: boolean; imageModel: string; imagePrompt: string | null; referenceMedia: string[] } | null>(null);
+  const [treeStats, setTreeStats] = useState<{ totalNodes: number; maxDepth: number; undiscovered: number; pendingImages: number; withImages: number } | null>(null);
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editModel, setEditModel] = useState("gpt-4o");
+  const [editImagePrompt, setEditImagePrompt] = useState("");
+  const [editImageModel, setEditImageModel] = useState("gemini-2.0-flash-preview-image-generation");
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [showCreateTree, setShowCreateTree] = useState(false);
+  const [newTreeId, setNewTreeId] = useState("");
+  const [newTreeTitle, setNewTreeTitle] = useState("");
+  const [newRootTitel, setNewRootTitel] = useState("");
+  const [newRootBeschreibung, setNewRootBeschreibung] = useState("");
+  const [newRootContext, setNewRootContext] = useState("");
+  const [newSystemPrompt, setNewSystemPrompt] = useState("");
+  const [treeSaving, setTreeSaving] = useState(false);
+
   // Countdown
   const [now, setNow] = useState(Date.now());
 
@@ -85,9 +102,16 @@ export default function AdminPage() {
       .then((r) => r.json())
       .then((d) => {
         if (d?.treeId) setSessionTreeId(d.treeId);
-        if (d?.version) setSessionTreeVersion(d.version);
+        setSessionTreeVersion("dynamic");
       })
       .catch(() => {});
+  }, [authed]);
+
+  // Load tree config
+  useEffect(() => {
+    if (!authed) return;
+    reloadTreeConfig();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed]);
 
   // Countdown ticker
@@ -178,6 +202,103 @@ export default function AdminPage() {
       await downloadAnleitung(t);
       await new Promise((r) => setTimeout(r, 300));
     }
+  }
+
+  // --- Tree config actions ---
+  async function reloadTreeConfig() {
+    const res = await fetch("/api/admin/tree-config", { headers: headers() });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.config) {
+        setTreeConfig(data.config);
+        setEditPrompt(data.config.systemPrompt);
+        setEditModel(data.config.modelName);
+        setEditImagePrompt(data.config.imagePrompt || "");
+        setEditImageModel(data.config.imageModel || "gemini-2.0-flash-preview-image-generation");
+        setTreeStats(data.stats ?? null);
+      } else {
+        setTreeConfig(null);
+        setTreeStats(null);
+      }
+    }
+  }
+
+  async function saveTreePrompt() {
+    if (!treeConfig) return;
+    setTreeSaving(true);
+    await fetch("/api/admin/tree-config", {
+      method: "PATCH",
+      headers: headers(),
+      body: JSON.stringify({ treeId: treeConfig.treeId, systemPrompt: editPrompt, modelName: editModel, imagePrompt: editImagePrompt, imageModel: editImageModel }),
+    });
+    await reloadTreeConfig();
+    setTreeSaving(false);
+  }
+
+  async function toggleDiscovery() {
+    if (!treeConfig) return;
+    setTreeSaving(true);
+    await fetch("/api/admin/tree-config", {
+      method: "PATCH",
+      headers: headers(),
+      body: JSON.stringify({ treeId: treeConfig.treeId, discoveryEnabled: !treeConfig.discoveryEnabled }),
+    });
+    await reloadTreeConfig();
+    setTreeSaving(false);
+  }
+
+  async function uploadMedia(file: File) {
+    if (!treeConfig) return;
+    setUploadingMedia(true);
+    const form = new FormData();
+    form.append("treeId", treeConfig.treeId);
+    form.append("file", file);
+    await fetch("/api/admin/tree-config/media", { method: "POST", headers: { authorization: `Bearer ${secret}` }, body: form });
+    await reloadTreeConfig();
+    setUploadingMedia(false);
+  }
+
+  async function removeMedia(url: string) {
+    if (!treeConfig) return;
+    setUploadingMedia(true);
+    await fetch("/api/admin/tree-config/media", {
+      method: "DELETE",
+      headers: headers(),
+      body: JSON.stringify({ treeId: treeConfig.treeId, url }),
+    });
+    await reloadTreeConfig();
+    setUploadingMedia(false);
+  }
+
+  async function createTree() {
+    if (!newTreeId || !newRootTitel || !newRootBeschreibung || !newRootContext || !newSystemPrompt) return;
+    setTreeSaving(true);
+    const res = await fetch("/api/admin/tree-config", {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({
+        treeId: newTreeId,
+        title: newTreeTitle || null,
+        rootTitel: newRootTitel,
+        rootBeschreibung: newRootBeschreibung,
+        rootContext: newRootContext,
+        systemPrompt: newSystemPrompt,
+      }),
+    });
+    if (res.ok) {
+      setShowCreateTree(false);
+      setNewTreeId("");
+      setNewTreeTitle("");
+      setNewRootTitel("");
+      setNewRootBeschreibung("");
+      setNewRootContext("");
+      setNewSystemPrompt("");
+      await reloadTreeConfig();
+    } else {
+      const data = await res.json().catch(() => null);
+      setError(data?.error ?? "Fehler beim Erstellen");
+    }
+    setTreeSaving(false);
   }
 
   // --- Session actions ---
@@ -410,6 +531,210 @@ export default function AdminPage() {
                   </span>
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+
+        {/* ===== TREE CONFIG SECTION ===== */}
+        <section style={s.card}>
+          <div style={s.cardTitle}>AI-Entscheidungsbaum</div>
+
+          {treeConfig ? (
+            <div style={{ display: "grid", gap: 12 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ fontWeight: 900, fontSize: 14 }}>{treeConfig.title || treeConfig.treeId}</span>
+                <span style={{ fontSize: 11, opacity: 0.5 }}>{treeConfig.treeId}</span>
+              </div>
+
+              {treeStats && (
+                <div style={{ display: "flex", gap: 16, fontSize: 12, opacity: 0.7, flexWrap: "wrap" }}>
+                  <span>{treeStats.totalNodes} Knoten</span>
+                  <span>Max Tiefe: {treeStats.maxDepth}</span>
+                  <span>{treeStats.undiscovered} unentdeckt</span>
+                  <span style={{ color: treeStats.pendingImages > 0 ? "rgba(255,200,50,0.9)" : "rgba(52,199,89,0.9)" }}>
+                    {treeStats.pendingImages > 0
+                      ? `${treeStats.pendingImages} Bilder ausstehend`
+                      : `${treeStats.withImages} Bilder fertig`}
+                  </span>
+                </div>
+              )}
+
+              {/* Discovery toggle */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <button
+                  onClick={toggleDiscovery}
+                  disabled={treeSaving}
+                  style={{
+                    width: 44,
+                    height: 24,
+                    borderRadius: 12,
+                    border: "none",
+                    cursor: "pointer",
+                    position: "relative",
+                    background: treeConfig.discoveryEnabled ? "rgba(52,199,89,0.8)" : "rgba(255,255,255,0.15)",
+                    transition: "background 0.2s",
+                  }}
+                >
+                  <div style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: "50%",
+                    background: "white",
+                    position: "absolute",
+                    top: 3,
+                    left: treeConfig.discoveryEnabled ? 23 : 3,
+                    transition: "left 0.2s",
+                  }} />
+                </button>
+                <span style={{ fontSize: 13, fontWeight: 800 }}>
+                  Entdeckung {treeConfig.discoveryEnabled ? "aktiv" : "pausiert"}
+                </span>
+              </div>
+
+              <div>
+                <div style={{ fontSize: 12, opacity: 0.7, fontWeight: 800, marginBottom: 4 }}>System-Prompt</div>
+                <textarea
+                  value={editPrompt}
+                  onChange={(e) => setEditPrompt(e.target.value)}
+                  rows={6}
+                  style={{ ...s.input, width: "100%", resize: "vertical" as const, fontFamily: "monospace", fontSize: 12 }}
+                />
+              </div>
+
+              <div>
+                <div style={{ fontSize: 12, opacity: 0.7, fontWeight: 800, marginBottom: 4 }}>Bild-Prompt</div>
+                <textarea
+                  value={editImagePrompt}
+                  onChange={(e) => setEditImagePrompt(e.target.value)}
+                  rows={4}
+                  placeholder="Optionaler System-Prompt für Bildgenerierung..."
+                  style={{ ...s.input, width: "100%", resize: "vertical" as const, fontFamily: "monospace", fontSize: 12 }}
+                />
+              </div>
+
+              {/* Reference media */}
+              <div>
+                <div style={{ fontSize: 12, opacity: 0.7, fontWeight: 800, marginBottom: 4 }}>Referenzmaterial</div>
+                {treeConfig.referenceMedia.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+                    {treeConfig.referenceMedia.map((url) => (
+                      <div key={url} style={{ position: "relative", width: 64, height: 64, borderRadius: 8, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)" }}>
+                        {url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                          <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", fontSize: 10, opacity: 0.5, background: "rgba(255,255,255,0.05)" }}>
+                            {url.split(".").pop()?.toUpperCase()}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => removeMedia(url)}
+                          disabled={uploadingMedia}
+                          style={{
+                            position: "absolute",
+                            top: 2,
+                            right: 2,
+                            width: 18,
+                            height: 18,
+                            borderRadius: "50%",
+                            border: "none",
+                            background: "rgba(255,59,92,0.9)",
+                            color: "white",
+                            fontSize: 10,
+                            fontWeight: 900,
+                            cursor: "pointer",
+                            display: "grid",
+                            placeItems: "center",
+                            lineHeight: 1,
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <label style={{
+                  display: "inline-block",
+                  padding: "6px 12px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  borderRadius: 8,
+                  border: "1px dashed rgba(255,255,255,0.2)",
+                  color: "rgba(255,255,255,0.6)",
+                  cursor: uploadingMedia ? "wait" : "pointer",
+                  opacity: uploadingMedia ? 0.5 : 1,
+                }}>
+                  {uploadingMedia ? "Hochladen..." : "+ Datei hinzufügen"}
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadMedia(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div style={s.row}>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>Text-Modell:</span>
+                <select
+                  value={editModel}
+                  onChange={(e) => setEditModel(e.target.value)}
+                  style={{ ...s.input, cursor: "pointer" }}
+                >
+                  <option value="gpt-4o">gpt-4o</option>
+                  <option value="gpt-4o-mini">gpt-4o-mini</option>
+                  <option value="gpt-4.1">gpt-4.1</option>
+                  <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                </select>
+              </div>
+
+              <div style={s.row}>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>Bild-Modell:</span>
+                <select
+                  value={editImageModel}
+                  onChange={(e) => setEditImageModel(e.target.value)}
+                  style={{ ...s.input, cursor: "pointer" }}
+                >
+                  <option value="gemini-2.0-flash-preview-image-generation">Gemini Flash (Image Gen)</option>
+                  <option value="gemini-2.5-flash-image">Gemini 2.5 Flash Image</option>
+                  <option value="hf:black-forest-labs/FLUX.1-schnell">HuggingFace FLUX Schnell</option>
+                </select>
+                <button style={s.btn} onClick={saveTreePrompt} disabled={treeSaving}>
+                  Speichern
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={s.muted}>Kein Baum konfiguriert.</div>
+          )}
+
+          {!showCreateTree ? (
+            <button style={{ ...s.btnSmall, marginTop: 10 }} onClick={() => setShowCreateTree(true)}>
+              Neuen Baum erstellen
+            </button>
+          ) : (
+            <div style={{ display: "grid", gap: 10, marginTop: 12, padding: 12, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 900 }}>Neuen Baum erstellen</div>
+              <div style={s.row}>
+                <input value={newTreeId} onChange={(e) => setNewTreeId(e.target.value)} placeholder="Tree ID (z.B. dream-v2)" style={{ ...s.input, flex: 1 }} />
+                <input value={newTreeTitle} onChange={(e) => setNewTreeTitle(e.target.value)} placeholder="Titel (optional)" style={{ ...s.input, flex: 1 }} />
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.6, fontWeight: 800 }}>Root-Knoten</div>
+              <input value={newRootTitel} onChange={(e) => setNewRootTitel(e.target.value)} placeholder="Titel (max 2 Wörter)" style={s.input} />
+              <input value={newRootBeschreibung} onChange={(e) => setNewRootBeschreibung(e.target.value)} placeholder="Beschreibung (Stichworte)" style={s.input} />
+              <textarea value={newRootContext} onChange={(e) => setNewRootContext(e.target.value)} placeholder="Kontext (Szenenbeschreibung)" rows={3} style={{ ...s.input, resize: "vertical" as const }} />
+              <div style={{ fontSize: 12, opacity: 0.6, fontWeight: 800 }}>System-Prompt</div>
+              <textarea value={newSystemPrompt} onChange={(e) => setNewSystemPrompt(e.target.value)} placeholder="Prompt für die AI-Generierung..." rows={5} style={{ ...s.input, resize: "vertical" as const, fontFamily: "monospace", fontSize: 12 }} />
+              <div style={s.row}>
+                <button style={s.btn} onClick={createTree} disabled={treeSaving || !newTreeId || !newRootTitel || !newRootBeschreibung || !newRootContext || !newSystemPrompt}>
+                  Erstellen
+                </button>
+                <button style={s.btnSmall} onClick={() => setShowCreateTree(false)}>Abbrechen</button>
+              </div>
             </div>
           )}
         </section>
