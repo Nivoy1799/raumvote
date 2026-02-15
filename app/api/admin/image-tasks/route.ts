@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkR2Health } from "@/lib/r2";
 
@@ -89,8 +89,8 @@ export async function POST(req: Request) {
       referenceMedia: config.referenceMedia,
     };
 
-    // Fire-and-forget retry
-    void (async () => {
+    // Run after response using after() to keep serverless alive
+    after(async () => {
       await prisma.imageTask.update({ where: { id: taskId }, data: { status: "generating", startedAt: new Date() } });
       try {
         const prompt = buildImagePrompt(node, config.imagePrompt);
@@ -105,7 +105,7 @@ export async function POST(req: Request) {
         const msg = err instanceof Error ? err.message : String(err);
         await prisma.imageTask.update({ where: { id: taskId }, data: { status: "failed", error: msg, completedAt: new Date() } });
       }
-    })();
+    });
 
     return NextResponse.json({ ok: true, message: "Retry started" });
   }
@@ -143,8 +143,8 @@ export async function POST(req: Request) {
       data: { status: "pending", error: null, startedAt: null, completedAt: null },
     });
 
-    // Fire-and-forget: process sequentially to avoid overloading
-    void (async () => {
+    // Process sequentially after response — after() keeps serverless alive
+    after(async () => {
       for (const task of failedTasks) {
         const node = await prisma.treeNode.findUnique({ where: { id: task.nodeId } });
         if (!node) continue;
@@ -164,7 +164,7 @@ export async function POST(req: Request) {
           await prisma.imageTask.update({ where: { id: task.id }, data: { status: "failed", error: msg, completedAt: new Date() } });
         }
       }
-    })();
+    });
 
     return NextResponse.json({ ok: true, retried: failedTasks.length });
   }
@@ -218,8 +218,8 @@ export async function POST(req: Request) {
       referenceMedia: config.referenceMedia,
     };
 
-    // Fire-and-forget: process sequentially
-    void (async () => {
+    // Process sequentially after response — after() keeps serverless alive
+    after(async () => {
       const tasks = await prisma.imageTask.findMany({
         where: { treeId, nodeId: { in: nodesNeedingImages.map((n) => n.id) }, status: "pending" },
       });
@@ -243,9 +243,60 @@ export async function POST(req: Request) {
           await prisma.imageTask.update({ where: { id: task.id }, data: { status: "failed", error: msg, completedAt: new Date() } });
         }
       }
-    })();
+    });
 
     return NextResponse.json({ ok: true, created: nodesNeedingImages.length });
+  }
+
+  if (action === "restart-pending" && treeId) {
+    const r2 = await checkR2Health();
+    if (!r2.ok) {
+      return NextResponse.json({ error: `R2 nicht erreichbar: ${r2.error}` }, { status: 503 });
+    }
+
+    const pendingTasks = await prisma.imageTask.findMany({
+      where: { treeId, status: "pending" },
+    });
+
+    if (pendingTasks.length === 0) {
+      return NextResponse.json({ ok: true, restarted: 0 });
+    }
+
+    const { generateNodeImage, buildImagePrompt } = await import("@/lib/imageGen");
+    const config = await prisma.treeConfig.findUnique({ where: { treeId } });
+    if (!config) {
+      return NextResponse.json({ error: "Config not found" }, { status: 404 });
+    }
+
+    const imageConfig = {
+      imageModel: config.imageModel,
+      imagePrompt: config.imagePrompt,
+      referenceMedia: config.referenceMedia,
+    };
+
+    after(async () => {
+      for (const task of pendingTasks) {
+        const node = await prisma.treeNode.findUnique({ where: { id: task.nodeId } });
+        if (!node) continue;
+
+        await prisma.imageTask.update({ where: { id: task.id }, data: { status: "generating", startedAt: new Date() } });
+        try {
+          const prompt = buildImagePrompt(node, config.imagePrompt);
+          const imgUrl = await generateNodeImage(prompt, node.id, imageConfig);
+          if (imgUrl) {
+            await prisma.treeNode.update({ where: { id: node.id }, data: { mediaUrl: imgUrl } });
+            await prisma.imageTask.update({ where: { id: task.id }, data: { status: "completed", imageUrl: imgUrl, completedAt: new Date() } });
+          } else {
+            await prisma.imageTask.update({ where: { id: task.id }, data: { status: "failed", error: "Generation returned null", completedAt: new Date() } });
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          await prisma.imageTask.update({ where: { id: task.id }, data: { status: "failed", error: msg, completedAt: new Date() } });
+        }
+      }
+    });
+
+    return NextResponse.json({ ok: true, restarted: pendingTasks.length });
   }
 
   if (action === "clear-completed" && treeId) {

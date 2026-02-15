@@ -305,6 +305,22 @@ export default function AdminPage() {
     setTreeSaving(false);
   }
 
+  async function restartPending() {
+    if (!treeConfig) return;
+    setTreeSaving(true);
+    const res = await fetch("/api/admin/image-tasks", {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ action: "restart-pending", treeId: treeConfig.treeId }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setError(data?.error ?? "Neustart fehlgeschlagen");
+    }
+    await reloadImageTasks();
+    setTreeSaving(false);
+  }
+
   async function backfillImages() {
     if (!treeConfig) return;
     setTreeSaving(true);
@@ -992,6 +1008,15 @@ export default function AdminPage() {
                   style={{ ...s.btnSmall, background: "rgba(96,165,250,0.15)" }}
                 >
                   Alle fehlgeschlagenen wiederholen ({imageTaskStats.failed})
+                </button>
+              )}
+              {imageTaskStats.pending > 0 && (
+                <button
+                  onClick={restartPending}
+                  disabled={treeSaving}
+                  style={{ ...s.btnSmall, background: "rgba(250,204,21,0.15)" }}
+                >
+                  Wartende neu starten ({imageTaskStats.pending})
                 </button>
               )}
               {imageTaskStats.completed > 0 && (

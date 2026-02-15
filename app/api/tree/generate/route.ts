@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { TreeNode } from "@prisma/client";
 import { hashVoterId } from "@/lib/voterHash";
@@ -158,7 +158,8 @@ export async function POST(req: Request) {
       prisma.imageTask.create({ data: { treeId: node.treeId, nodeId: rightId, nodeTitel: result.right.titel, status: "pending" } }),
     ]);
 
-    void (async () => {
+    // Use after() to keep serverless function alive until image generation completes
+    after(async () => {
       async function processTask(taskId: string, nodeIdArg: string, prompt: string) {
         await prisma.imageTask.update({ where: { id: taskId }, data: { status: "generating", startedAt: new Date() } });
         try {
@@ -179,7 +180,7 @@ export async function POST(req: Request) {
         processTask(leftTask.id, leftId, leftPrompt),
         processTask(rightTask.id, rightId, rightPrompt),
       ]);
-    })();
+    });
   }
 
   return NextResponse.json(result);
