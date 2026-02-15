@@ -138,6 +138,9 @@ export default function NodePage() {
   const [commentModalOpen, setCommentModalOpen] = useState(false);
   const [commentModalOptionId, setCommentModalOptionId] = useState<string | null>(null);
   const [activeCard, setActiveCard] = useState<0 | 1>(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number; y: number; axis: "x" | "y" | null } | null>(null);
 
   // Stable ref for placeholderUrl to avoid dep issues
   const phRef = useRef(placeholderUrl);
@@ -311,24 +314,75 @@ export default function NodePage() {
 
   const isPortrait = r.breakpoint === "small";
 
+  // Landscape/large swipe — navigates into child
   const swipe = useSwipeChoice({
     onChoice: (c) => {
       if (!left || !right) return;
-      if (isPortrait) {
-        // In carousel mode, swipe left/right switches cards
-        if (c === "left") setActiveCard(1);
-        else setActiveCard(0);
-      } else {
-        navigate(c === "left" ? left : right);
-      }
+      navigate(c === "left" ? left : right);
     },
-    onSwipeUp: isPortrait ? () => {
-      if (!left || !right) return;
-      const target = activeCard === 0 ? left : right;
-      navigate(target);
-    } : undefined,
     thresholdPx: 70,
   });
+
+  // Portrait carousel — drag tracking for smooth transitions
+  function onCarouselPointerDown(e: React.PointerEvent) {
+    dragStartRef.current = { x: e.clientX, y: e.clientY, axis: null };
+    setIsDragging(true);
+    setDragOffset(0);
+  }
+
+  function onCarouselPointerMove(e: React.PointerEvent) {
+    if (!dragStartRef.current) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+
+    // Decide axis after 10px movement
+    if (!dragStartRef.current.axis) {
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+        dragStartRef.current.axis = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+      }
+    }
+
+    if (dragStartRef.current.axis === "x") {
+      // Dampen drag at edges (card 0 swiping right, or card 1 swiping left)
+      let offset = dx;
+      if ((activeCard === 0 && dx > 0) || (activeCard === 1 && dx < 0)) {
+        offset = dx * 0.3; // rubber band effect
+      }
+      setDragOffset(offset);
+    }
+  }
+
+  function onCarouselPointerUp(e: React.PointerEvent) {
+    if (!dragStartRef.current) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    const axis = dragStartRef.current.axis;
+
+    dragStartRef.current = null;
+    setIsDragging(false);
+    setDragOffset(0);
+
+    // Vertical swipe up — navigate into subtree
+    if (axis === "y" && dy < -70) {
+      if (left && right) {
+        navigate(activeCard === 0 ? left : right);
+      }
+      return;
+    }
+
+    // Horizontal swipe — switch card
+    if (axis === "x") {
+      if (dx < -50 && activeCard === 0) setActiveCard(1);
+      else if (dx > 50 && activeCard === 1) setActiveCard(0);
+    }
+  }
+
+  const carouselBind = {
+    onPointerDown: onCarouselPointerDown,
+    onPointerMove: onCarouselPointerMove,
+    onPointerUp: onCarouselPointerUp,
+    onPointerCancel: onCarouselPointerUp,
+  };
 
   // Loading state — AI text generation
   if (!node || generating) {
@@ -478,7 +532,7 @@ export default function NodePage() {
   if (isPortrait) {
     return (
       <main style={styles.shell}>
-        <div style={styles.frame} {...swipe.bind()}>
+        <div style={{ ...styles.frame, touchAction: "none" }} {...carouselBind}>
           {/* Question header */}
           <header style={{ ...styles.top, zIndex: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -516,8 +570,8 @@ export default function NodePage() {
             position: "absolute",
             inset: 0,
             display: "flex",
-            transform: `translateX(${-activeCard * 100}%)`,
-            transition: "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+            transform: `translateX(calc(${-activeCard * 100}% + ${dragOffset}px))`,
+            transition: isDragging ? "none" : "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
           }}>
             {options.map((opt, i) => (
               <div key={opt.id} style={{
