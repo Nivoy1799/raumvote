@@ -770,7 +770,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <div style={{ fontSize: 12, opacity: 0.7, fontWeight: 800, marginBottom: 4 }}>System-Prompt</div>
+                <div style={{ fontSize: 12, opacity: 0.7, fontWeight: 800, marginBottom: 4 }}>Node: System-Prompt</div>
                 <textarea
                   value={editPrompt}
                   onChange={(e) => setEditPrompt(e.target.value)}
@@ -780,7 +780,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <div style={{ fontSize: 12, opacity: 0.7, fontWeight: 800, marginBottom: 4 }}>Bild-Prompt</div>
+                <div style={{ fontSize: 12, opacity: 0.7, fontWeight: 800, marginBottom: 4 }}>Bild: System-Prompt</div>
                 <textarea
                   value={editImagePrompt}
                   onChange={(e) => setEditImagePrompt(e.target.value)}
@@ -905,7 +905,7 @@ export default function AdminPage() {
               <input value={newRootTitel} onChange={(e) => setNewRootTitel(e.target.value)} placeholder="Titel (max 2 Wörter)" style={s.input} />
               <input value={newRootBeschreibung} onChange={(e) => setNewRootBeschreibung(e.target.value)} placeholder="Beschreibung (Stichworte)" style={s.input} />
               <textarea value={newRootContext} onChange={(e) => setNewRootContext(e.target.value)} placeholder="Kontext (Szenenbeschreibung)" rows={3} style={{ ...s.input, resize: "vertical" as const }} />
-              <div style={{ fontSize: 12, opacity: 0.6, fontWeight: 800 }}>System-Prompt</div>
+              <div style={{ fontSize: 12, opacity: 0.6, fontWeight: 800 }}>Node: System-Prompt</div>
               <textarea value={newSystemPrompt} onChange={(e) => setNewSystemPrompt(e.target.value)} placeholder="Prompt für die AI-Generierung..." rows={5} style={{ ...s.input, resize: "vertical" as const, fontFamily: "monospace", fontSize: 12 }} />
               <div style={s.row}>
                 <button style={s.btn} onClick={createTree} disabled={treeSaving || !newTreeId || !newRootTitel || !newRootBeschreibung || !newRootContext || !newSystemPrompt}>
