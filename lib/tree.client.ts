@@ -1,56 +1,39 @@
-import type { Node, Option } from "./tree.types";
+import type { ActiveTreeMeta, NodePageData, GenerateResult, TreeNodeData } from "./tree.types";
 
-type ActiveTree = {
-  treeId: string;
-  version: string;
-  startNodeId: string;
-  nodes: Record<string, Node>;
-  options: Record<string, Option>;
-};
-
-// Cache (damit wir nicht bei jedem Call neu fetchen)
-let cachedTree: ActiveTree | null = null;
-
-async function loadActiveTree(): Promise<ActiveTree> {
-  if (cachedTree) return cachedTree;
-
-  const res = await fetch("/tree.active.json", { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error("Failed to load active tree");
-  }
-
-  const data = (await res.json()) as ActiveTree;
-  cachedTree = data;
-  return data;
+export async function fetchActiveTreeMeta(): Promise<ActiveTreeMeta> {
+  const res = await fetch("/api/tree/active", { cache: "no-store" });
+  if (!res.ok) throw new Error("No active tree");
+  return res.json();
 }
 
-export async function fetchActiveTreeMeta() {
-  const tree = await loadActiveTree();
-  return {
-    treeId: tree.treeId,
-    version: tree.version,
-    startNodeId: tree.startNodeId,
-  };
+export async function fetchNodePage(nodeId: string): Promise<NodePageData | null> {
+  const res = await fetch(`/api/tree/node?nodeId=${encodeURIComponent(nodeId)}`, { cache: "no-store" });
+  if (!res.ok) return null;
+  return res.json();
 }
 
-export async function fetchNode(treeId: string, nodeId: string): Promise<Node> {
-  const tree = await loadActiveTree();
-
-  const node = tree.nodes[nodeId];
-  if (!node) {
-    throw new Error(`Node ${nodeId} not found`);
-  }
-
-  return node;
+export async function generateChildren(nodeId: string, voterId: string): Promise<GenerateResult> {
+  const res = await fetch("/api/tree/generate", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ nodeId, voterId }),
+  });
+  if (!res.ok) throw new Error("Generation failed");
+  return res.json();
 }
 
-export async function fetchOption(treeId: string, optionId: string): Promise<Option> {
-  const tree = await loadActiveTree();
+export async function fetchSingleNode(nodeId: string): Promise<TreeNodeData | null> {
+  const res = await fetch(`/api/tree/node?nodeId=${encodeURIComponent(nodeId)}`, { cache: "no-store" });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.node ?? null;
+}
 
-  const option = tree.options[optionId];
-  if (!option) {
-    throw new Error(`Option ${optionId} not found`);
-  }
-
-  return option;
+export async function discoverNode(nodeId: string, voterId: string) {
+  const res = await fetch("/api/tree/discover", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ nodeId, voterId }),
+  });
+  return res.json();
 }

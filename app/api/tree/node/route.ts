@@ -1,30 +1,39 @@
 import { NextResponse } from "next/server";
-import fs from "node:fs";
-import path from "node:path";
-import type { TreeSnapshot } from "@/lib/tree.types";
-
-function loadActiveTree(): TreeSnapshot {
-  const file = path.join(process.cwd(), "public", "tree.active.json");
-  const raw = fs.readFileSync(file, "utf-8");
-  return JSON.parse(raw) as TreeSnapshot;
-}
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const treeId = searchParams.get("treeId") ?? "";
   const nodeId = searchParams.get("nodeId") ?? "";
 
-  const tree = loadActiveTree();
-
-  // In MVP: only one active tree file; later: resolve by treeId/version from DB/cache
-  if (!treeId || treeId !== tree.treeId) {
-    return NextResponse.json({ error: "Unknown treeId" }, { status: 400 });
+  if (!nodeId) {
+    return NextResponse.json({ error: "Missing nodeId" }, { status: 400 });
   }
 
-  const node = tree.nodes[nodeId];
+  const node = await prisma.treeNode.findUnique({
+    where: { id: nodeId },
+  });
+
   if (!node) {
-    return NextResponse.json({ error: "Unknown nodeId" }, { status: 400 });
+    return NextResponse.json({ error: "Unknown nodeId" }, { status: 404 });
   }
 
-  return NextResponse.json(node);
+  // Increment visit count (fire-and-forget)
+  prisma.treeNode.update({
+    where: { id: nodeId },
+    data: { amountVisits: { increment: 1 } },
+  }).catch(() => {});
+
+  // Fetch children if generated
+  let left = null;
+  let right = null;
+
+  if (node.generated) {
+    const children = await prisma.treeNode.findMany({
+      where: { parentId: nodeId },
+    });
+    left = children.find((c) => c.side === "left") ?? null;
+    right = children.find((c) => c.side === "right") ?? null;
+  }
+
+  return NextResponse.json({ node, left, right });
 }

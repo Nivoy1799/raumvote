@@ -1,19 +1,18 @@
 import { NextResponse } from "next/server";
-import fs from "node:fs";
-import path from "node:path";
-import type { TreeSnapshot } from "@/lib/tree.types";
-
-function loadActiveTree(): TreeSnapshot {
-  const file = path.join(process.cwd(), "public", "tree.active.json");
-  const raw = fs.readFileSync(file, "utf-8");
-  return JSON.parse(raw) as TreeSnapshot;
-}
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const tree = loadActiveTree();
+  const config = await prisma.treeConfig.findFirst({
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!config || !config.rootNodeId) {
+    return NextResponse.json({ error: "No active tree configured" }, { status: 404 });
+  }
+
   return NextResponse.json({
-    treeId: tree.treeId,
-    version: tree.version,
-    startNodeId: tree.startNodeId,
+    treeId: config.treeId,
+    rootNodeId: config.rootNodeId,
+    placeholderUrl: config.placeholderUrl,
   });
 }

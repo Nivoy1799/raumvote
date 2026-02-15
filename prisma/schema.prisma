@@ -90,3 +90,47 @@ model VotingSession {
   updatedAt    DateTime  @updatedAt
 }
 
+model TreeNode {
+  id             String    @id @default(cuid())
+  treeId         String
+  titel          String
+  beschreibung   String
+  context        String    @db.Text
+  question       String?
+  mediaUrl       String?
+  side           String?                   // "left" | "right" | null (root)
+  depth          Int       @default(0)
+
+  discovererHash String?
+  discoveredAt   DateTime?
+  amountVisits   Int       @default(0)
+  generated      Boolean   @default(false)
+
+  parentId       String?
+  parent         TreeNode?  @relation("TreeChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children       TreeNode[] @relation("TreeChildren")
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([parentId, side])
+  @@index([treeId])
+  @@index([parentId])
+}
+
+model TreeConfig {
+  id             String   @id @default(cuid())
+  treeId         String   @unique
+  rootNodeId     String?
+  title          String?
+  systemPrompt   String   @db.Text
+  modelName      String   @default("gpt-4o")
+  placeholderUrl   String   @default("/media/placeholder.jpg")
+  discoveryEnabled Boolean  @default(true)
+  imageModel       String   @default("gemini-2.0-flash-preview-image-generation")
+  imagePrompt      String?  @db.Text
+  referenceMedia   String[] @default([])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
