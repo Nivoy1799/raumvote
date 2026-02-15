@@ -1,71 +1,75 @@
-# RaumVote – Digitale Jugendbeteiligung für öffentliche Räume  
+# RaumVote – Digitale Jugendbeteiligung für öffentliche Räume
 
-## 1. Projektkontext  
+![logo](private/logo.png)
 
-### Ausgangslage  
-In einer Toggenburger Gemeinde bestehen Nutzungskonflikte im öffentlichen Raum zwischen Jugendlichen und anderen Anspruchsgruppen. Jugendliche fühlen sich verdrängt, während Anwohnende Lärm und Unsicherheitsgefühle beklagen. Repressive Sofortmassnahmen (z. B. Abbau von Sitzbänken) führten lediglich zu einer Problemverlagerung.  
+## 1. Projektkontext
 
-### Problemstellung  
-Jugendliche – insbesondere jene ohne Vereins- oder politische Anbindung – sind in formellen Planungsprozessen kaum vertreten. Ihre Bedürfnisse nach Begegnung, informellem Aufenthalt und Mitgestaltung bleiben unberücksichtigt.  
+### Ausgangslage
+In einer Toggenburger Gemeinde bestehen Nutzungskonflikte im öffentlichen Raum zwischen Jugendlichen und anderen Anspruchsgruppen. Jugendliche fühlen sich verdrängt, während Anwohnende Lärm und Unsicherheitsgefühle beklagen. Repressive Sofortmassnahmen (z. B. Abbau von Sitzbänken) führten lediglich zu einer Problemverlagerung.
 
-### Zielsetzung  
-Entwicklung eines digitalen, jugendgerechten Beteiligungsformats, das:  
+### Problemstellung
+Jugendliche – insbesondere jene ohne Vereins- oder politische Anbindung – sind in formellen Planungsprozessen kaum vertreten. Ihre Bedürfnisse nach Begegnung, informellem Aufenthalt und Mitgestaltung bleiben unberücksichtigt.
+
+### Zielsetzung
+Entwicklung eines digitalen, jugendgerechten Beteiligungsformats, das:
+
 - zeit- und ortsunabhängig nutzbar ist  
 - anonym und datenschutzkonform funktioniert  
 - digitalen Austausch ermöglicht  
 - Beteiligungsergebnisse anschlussfähig für kommunale Planungsprozesse macht  
 
-RaumVote ist die prototypische Umsetzung dieses Beteiligungsansatzes.  
+**RaumVote** ist die prototypische Umsetzung dieses Beteiligungsansatzes.
 
 ---
 
-## 2. Vision & Value Proposition  
+## 2. Vision & Value Proposition
 
-### Why  
-Jugendliche erhalten ein niederschwelliges, digitales Sprachrohr zur Mitgestaltung öffentlicher Räume.  
+### Why
+Jugendliche erhalten ein niederschwelliges, digitales Sprachrohr zur Mitgestaltung öffentlicher Räume.
 
-### How  
-Mobile-first Voting-App mit interaktiven Entscheidungsbäumen, Diskussions- und Feedbackfunktionen.  
+### How
+Mobile-first Voting-App mit interaktiven Entscheidungsbäumen sowie Diskussions- und Feedbackfunktionen.
 
-### What  
-Ein datenschutzkonformes Beteiligungstool für Gemeinden mit Fokus auf Jugendpartizipation.  
+### What
+Ein datenschutzkonformes Beteiligungstool für Gemeinden mit Fokus auf Jugendpartizipation.
 
-RaumVote verbindet Design-Thinking-Prinzipien (Empathize → Define → Ideate → Prototype → Test) mit einer real implementierten Webanwendung.  
+RaumVote verbindet Design-Thinking-Prinzipien  
+(Empathize → Define → Ideate → Prototype → Test)  
+mit einer real implementierten Webanwendung.
 
 ---
 
 ## 3. Systemarchitektur (C4-Übersicht)
 
+### Level 1 – System Context
 
-### Level 1 – System Context  
+![System Context](private/c4_model_system.png)
 
-![Alt text](private/c4_model_system.png)
-
-**Akteure**  
+#### Akteure
 - Jugendliche (z. B. „Liam“, 14) – stimmen ab, bringen Ideen ein  
 - Senior:innen – diskutieren und bewerten  
 - Jugendarbeit – moderiert  
 - Gemeindeverwaltung – nutzt Ergebnisse für Planung  
 
-**Externe Systeme**  
+#### Externe Systeme
 - OpenAI AI Agents – Generierung von Entscheidungsbäumen und Bild-Prompts  
 - Cloudflare – Tunnel & Storage  
 - Lokaler Picture Generator – KI-Bildgenerierung  
 
 ---
 
-### Level 2 – Container  
+### Level 2 – Container
 
-![Alt text](private/c4_model_container.png)
+![Container Diagram](private/c4_model_container.png)
 
-| Container | Technologie | Zweck |
-|------------|-------------|-------|
-| Web App | Next.js 16, React 19 | UI & API Routes |
-| Database | PostgreSQL (Neon) | Persistenz |
-| Cloudflare Storage | R2 | Bild-Repository |
-| Picture Generator | Local Runtime | Generiert Bilder via Prompt |
+| Container            | Technologie               | Zweck                    |
+|----------------------|--------------------------|--------------------------|
+| Web App              | Next.js 16, React 19     | UI & API Routes          |
+| Database             | PostgreSQL (Neon)        | Persistenz               |
+| Cloudflare Storage   | R2                       | Bild-Repository          |
+| Picture Generator    | Local Runtime            | Generiert Bilder via Prompt |
 
-**Architekturprinzipien**  
+#### Architekturprinzipien
 - Mobile-first  
 - Privacy-by-Design  
 - API-zentriert  
@@ -73,7 +77,7 @@ RaumVote verbindet Design-Thinking-Prinzipien (Empathize → Define → Ideate �
 
 ---
 
-## 4. Technischer Stack  
+## 4. Technischer Stack
 
 - **Frontend:** React 19 + Next.js 16 (App Router)  
 - **Backend:** Next.js API Routes  
@@ -85,126 +89,129 @@ RaumVote verbindet Design-Thinking-Prinzipien (Empathize → Define → Ideate �
 
 ---
 
-## 5. Kernkonzept: Entscheidungsbäume  
+## 5. Kernkonzept: Entscheidungsbäume
 
-Das Beteiligungsformat basiert auf einem **binären Decision Tree** (`public/tree.active.json`).  
+Das Beteiligungsformat basiert auf einem **binären Decision Tree**  
+(`public/tree.active.json`).
 
-**Struktur:**  
+### Struktur
 - `Nodes` → Binäre Fragen  
 - `Options` → Antwortoptionen mit Bild  
 - `Leaf` → Abstimmbares Endergebnis  
 
-**Vorteile:**  
+### Vorteile
 - Gamifizierte Navigation (Swipe-Logik)  
 - Niedrige Einstiegshürde  
 - Strukturierte Ideensammlung  
 
 ---
 
-## 6. Datenschutz & Identitätskonzept  
+## 6. Datenschutz & Identitätskonzept
 
-RaumVote folgt einem **privacy-first Ansatz**:
+RaumVote folgt einem **Privacy-First-Ansatz**:
 
 - Zugang via vorerstellte UUID-Token  
 - Token wird lokal gespeichert (`localStorage`)  
 - Server speichert nur `voterHash` (SHA-256 mit Pepper)  
 - Keine Speicherung von Roh-Token in Votes oder Kommentaren  
 
-**Prinzipien:**  
+### Prinzipien
 - Pseudonymisierung  
 - Minimaldatenspeicherung  
 - DSGVO-orientierte Architektur  
 
 ---
 
-## 7. API-Design  
+## 7. API-Design
 
-Alle API-Routen folgen dem Muster:  
+Alle API-Routen folgen diesem Muster:
 
 1. Token validieren  
-2. voterId hashen  
+2. `voterId` hashen  
 3. Prisma Query ausführen  
-4. JSON Response zurückgeben  
+4. JSON-Response zurückgeben  
 
-**Beispielendpunkte:**  
+### Beispielendpunkte
 
 - `POST /api/vote` – Vote toggeln  
 - `GET /api/vote/status` – Aktuellen Vote prüfen  
 - `POST /api/like` – Like toggeln  
 - `GET /api/results` – Aggregierte Ergebnisse  
 - `GET /api/auth/validate` – Tokenvalidierung  
-- `/api/admin/tokens` – Token-Management  
+- `POST /api/admin/tokens` – Token-Management  
 
 ---
 
-## 8. UX-Konzept  
+## 8. UX-Konzept
 
 - TikTok-ähnliche Swipe-Navigation  
-- ActionRail mit Like/Vote/Comment  
+- ActionRail mit Like / Vote / Comment  
 - Bottom-Sheet-Kommentare  
 - Fixe Tabbar (64px Layoutkonvention)  
 - Deutsche UI-Texte  
 
-**Ziel:**  
-Maximale Niederschwelligkeit für digital-affine Jugendliche.  
+### Ziel
+Maximale Niederschwelligkeit für digital-affine Jugendliche.
 
 ---
 
-## 9. Entwicklungsprozess  
+## 9. Entwicklungsprozess
 
-RaumVote wurde im Rahmen einer Design-Thinking Blockwoche entwickelt.  
+RaumVote wurde im Rahmen einer Design-Thinking-Blockwoche entwickelt.
 
-**Phasen:**  
+### Phasen
+
 1. Empathize – Persona-Analyse (z. B. 14-jähriger Schüler)  
 2. Define – Problemraum klären  
 3. Ideate – Beteiligungsansatz konzipieren  
 4. Prototype – Web-App entwickeln  
 5. Test – Feedback & Iteration  
 
-**Arbeitsweise:**  
+### Arbeitsweise
+
 - Scrum-Rollen (Product Owner, Scrum Master, Dev Team)  
 - Sprintzyklen  
 - Pitch-Präsentation mit Vision & Reflexion  
 
 ---
 
-## 10. Betrieb & Setup  
+## 10. Betrieb & Setup
 
-```bash
-npm run dev          # Start dev server
-npm run build        # Build + Prisma generate
-npm run lint         # ESLint
-npx prisma migrate dev --name <name>
-npx prisma generate
-```
+    npm run dev
+    npm run build
+    npm run lint
+    npx prisma migrate dev --name <name>
+    npx prisma generate
 
-### Environment Variablen
+### Environment-Variablen
 
-DATABASE_URL
-DIRECT_URL
-VOTER_PEPPER
-ADMIN_SECRET
+    DATABASE_URL=
+    DIRECT_URL=
+    VOTER_PEPPER=
+    ADMIN_SECRET=
+
+---
 
 ## 11. Beitrag zur Gemeindeentwicklung
 
-RaumVote erfüllt folgende Beteiligungsstufen:
+RaumVote unterstützt folgende Beteiligungsstufen:
 
-* Information
-* Mitreden
-* Mitentscheiden
-* Mitwirken
+- Information  
+- Mitreden  
+- Mitentscheiden  
+- Mitwirken  
 
-Das Tool kann in zukünftigen Entwicklungsprojekten adaptiert werden (z. B. Spielplätze, Verkehr, Freiräume).
+Das Tool kann in zukünftigen Entwicklungsprojekten adaptiert werden  
+(z. B. Spielplätze, Verkehr, Freiräume).
 
 Es bildet eine digitale Brücke zwischen:
 
-Jugend
+- Jugend  
+- Verwaltung  
+- Planung  
+- Öffentlichkeit  
 
-Verwaltung
-
-Planung
-
-Öffentlichkeit
+---
 
 ## 12. Fazit
 
@@ -212,14 +219,10 @@ RaumVote ist ein prototypischer, technisch implementierter Lösungsansatz für d
 
 Es kombiniert:
 
-Design Thinking
-
-Gamifizierte Entscheidungslogik
-
-Datenschutzorientierte Architektur
-
-KI-gestützte Inhaltsgenerierung
-
-Praxisrelevanz für kommunale Planung
+- Design Thinking  
+- Gamifizierte Entscheidungslogik  
+- Datenschutzorientierte Architektur  
+- KI-gestützte Inhaltsgenerierung  
+- Praxisrelevanz für kommunale Planung  
 
 Damit adressiert das Projekt sowohl soziale als auch technologische Aspekte digitaler Transformation in Gemeinden.
