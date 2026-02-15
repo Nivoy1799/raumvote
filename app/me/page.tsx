@@ -1,19 +1,31 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import NextImage from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faCamera } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/lib/useAuth";
 import { useResponsive } from "@/lib/useResponsive";
 
+type LikedNode = {
+  id: string;
+  optionId: string;
+  createdAt: string;
+  node: { id: string; titel: string; beschreibung: string; mediaUrl: string | null; parentId: string | null; depth: number } | null;
+};
+
 export default function MePage() {
   const { voterId } = useAuth();
+  const router = useRouter();
   const r = useResponsive();
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [likedNodes, setLikedNodes] = useState<LikedNode[]>([]);
+  const [likesLoading, setLikesLoading] = useState(true);
 
   useEffect(() => {
     if (!voterId) return;
@@ -24,6 +36,14 @@ export default function MePage() {
       setUsername((data?.username ?? "").toString());
       setAvatarUrl(data?.avatarUrl || null);
       setLoading(false);
+    })();
+    // Fetch liked nodes
+    (async () => {
+      setLikesLoading(true);
+      const res = await fetch(`/api/like/list?voterId=${encodeURIComponent(voterId)}`, { cache: "no-store" });
+      const data = await res.json().catch(() => null);
+      setLikedNodes(data?.likes ?? []);
+      setLikesLoading(false);
     })();
   }, [voterId]);
 
@@ -37,7 +57,7 @@ export default function MePage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
         canvas.width = 160;
@@ -122,6 +142,55 @@ export default function MePage() {
             </button>
             {saved && <div style={{ fontSize: r.fontSize.small, opacity: 0.85 }}>Saved ✓</div>}
           </div>
+        </section>
+
+        {/* Liked nodes */}
+        <section style={{ marginTop: r.spacing.medium }}>
+          <div style={{ fontSize: r.fontSize.title, fontWeight: 950, letterSpacing: -0.3, marginBottom: r.spacing.small }}>Deine Likes</div>
+          {likesLoading ? (
+            <div style={{ opacity: 0.5, fontSize: r.fontSize.body }}>Laden...</div>
+          ) : likedNodes.length === 0 ? (
+            <div style={{ opacity: 0.5, fontSize: r.fontSize.body }}>Noch keine Likes</div>
+          ) : (
+            <div style={{ display: "grid", gap: 10 }}>
+              {likedNodes.map((like) => {
+                if (!like.node) return null;
+                const n = like.node;
+                return (
+                  <button
+                    key={like.id}
+                    onClick={() => router.push(`/n/${n.parentId || n.id}`)}
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      alignItems: "center",
+                      padding: 10,
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      background: "rgba(255,255,255,0.04)",
+                      borderRadius: r.borderRadius.small,
+                      cursor: "pointer",
+                      color: "white",
+                      textAlign: "left" as const,
+                      width: "100%",
+                    }}
+                  >
+                    <div style={{ width: 56, height: 56, borderRadius: r.borderRadius.small - 4, overflow: "hidden", flexShrink: 0, position: "relative" as const, background: "rgba(255,255,255,0.06)" }}>
+                      {n.mediaUrl && (
+                        <NextImage src={n.mediaUrl} alt={n.titel} fill style={{ objectFit: "cover" }} sizes="56px" />
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: r.fontSize.body, fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{n.titel}</div>
+                      <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{n.beschreibung}</div>
+                      <div style={{ fontSize: r.fontSize.small - 1, opacity: 0.4, marginTop: 2 }}>
+                        Tiefe {n.depth} &middot; {new Date(like.createdAt).toLocaleDateString("de")}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </section>
       </div>
     </main>
