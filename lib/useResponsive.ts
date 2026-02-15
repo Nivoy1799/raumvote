@@ -39,10 +39,10 @@ const CONFIGS: Record<Breakpoint, Omit<ResponsiveValues, "breakpoint" | "isLands
   },
   medium: {
     maxWidth: "100vw",
-    tabbarHeight: 40,
-    actionRailSize: 36,
-    fontSize: { title: 15, body: 12, button: 12, small: 10 },
-    spacing: { small: 4, medium: 8, large: 14 },
+    tabbarHeight: 44,
+    actionRailSize: 48,
+    fontSize: { title: 16, body: 13, button: 14, small: 11 },
+    spacing: { small: 6, medium: 10, large: 16 },
     borderRadius: { small: 10, medium: 14, large: 18 },
   },
   large: {

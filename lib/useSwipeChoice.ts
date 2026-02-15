@@ -6,10 +6,11 @@ type Choice = "left" | "right";
 
 export function useSwipeChoice(opts: {
   onChoice: (choice: Choice) => void;
+  onSwipeUp?: () => void;
   thresholdPx?: number;
   lockIfVerticalScroll?: boolean;
 }) {
-  const { onChoice, thresholdPx = 70, lockIfVerticalScroll = true } = opts;
+  const { onChoice, onSwipeUp, thresholdPx = 70, lockIfVerticalScroll = true } = opts;
 
   const startX = useRef<number | null>(null);
   const startY = useRef<number | null>(null);
@@ -35,8 +36,8 @@ export function useSwipeChoice(opts: {
       }
     }
 
-    if (lockIfVerticalScroll && decidedAxis.current === "y") {
-      // allow normal vertical scrolling behavior
+    if (lockIfVerticalScroll && decidedAxis.current === "y" && !onSwipeUp) {
+      // allow normal vertical scrolling behavior (only if no swipeUp handler)
       return;
     }
   }
@@ -48,12 +49,18 @@ export function useSwipeChoice(opts: {
     const dy = e.clientY - startY.current;
 
     active.current = false;
-
     startX.current = null;
     startY.current = null;
 
-    if (lockIfVerticalScroll && Math.abs(dy) > Math.abs(dx)) return;
+    // Vertical axis dominant — check for upward swipe
+    if (Math.abs(dy) > Math.abs(dx)) {
+      if (onSwipeUp && dy < -thresholdPx) {
+        onSwipeUp();
+      }
+      return;
+    }
 
+    // Horizontal swipe
     if (dx < -thresholdPx) onChoice("left");
     else if (dx > thresholdPx) onChoice("right");
   }

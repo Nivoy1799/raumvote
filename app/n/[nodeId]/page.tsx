@@ -137,6 +137,7 @@ export default function NodePage() {
   const [commentCountRight, setCommentCountRight] = useState(0);
   const [commentModalOpen, setCommentModalOpen] = useState(false);
   const [commentModalOptionId, setCommentModalOptionId] = useState<string | null>(null);
+  const [activeCard, setActiveCard] = useState<0 | 1>(0);
 
   // Stable ref for placeholderUrl to avoid dep issues
   const phRef = useRef(placeholderUrl);
@@ -308,11 +309,24 @@ export default function NodePage() {
     setShowReveal(false);
   }
 
+  const isPortrait = r.breakpoint === "small";
+
   const swipe = useSwipeChoice({
     onChoice: (c) => {
       if (!left || !right) return;
-      navigate(c === "left" ? left : right);
+      if (isPortrait) {
+        // In carousel mode, swipe left/right switches cards
+        if (c === "left") setActiveCard(1);
+        else setActiveCard(0);
+      } else {
+        navigate(c === "left" ? left : right);
+      }
     },
+    onSwipeUp: isPortrait ? () => {
+      if (!left || !right) return;
+      const target = activeCard === 0 ? left : right;
+      navigate(target);
+    } : undefined,
     thresholdPx: 70,
   });
 
@@ -403,6 +417,12 @@ export default function NodePage() {
   const rightIsPlaceholder = isPlaceholder(right.mediaUrl, placeholderUrl);
   const showShimmer = imagesLoading && !skipImages;
 
+  const options = [left, right];
+  const likedStates = [likedLeft, likedRight];
+  const likeCounts = [likeCountLeft, likeCountRight];
+  const commentCounts = [commentCountLeft, commentCountRight];
+  const placeholderStates = [leftIsPlaceholder, rightIsPlaceholder];
+
   const styles = {
     shell: {
       position: "fixed" as const,
@@ -454,6 +474,159 @@ export default function NodePage() {
     },
   };
 
+  // ====== PORTRAIT CAROUSEL MODE ======
+  if (isPortrait) {
+    return (
+      <main style={styles.shell}>
+        <div style={styles.frame} {...swipe.bind()}>
+          {/* Question header */}
+          <header style={{ ...styles.top, zIndex: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: r.fontSize.small, opacity: 0.7 }}>
+                  RaumVote • Depth {node.depth}
+                </div>
+                <div style={{ fontSize: r.fontSize.button, fontWeight: 900 }}>{node.question}</div>
+              </div>
+              {showShimmer && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSkipImages(true); }}
+                  style={{
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: 6,
+                    color: "rgba(255,255,255,0.7)",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: "4px 10px",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    marginLeft: 8,
+                    marginTop: 2,
+                  }}
+                >
+                  Skip
+                </button>
+              )}
+            </div>
+          </header>
+
+          {/* Carousel track */}
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            transform: `translateX(${-activeCard * 100}%)`,
+            transition: "transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+          }}>
+            {options.map((opt, i) => (
+              <div key={opt.id} style={{
+                position: "relative",
+                width: "100%",
+                height: "100%",
+                flexShrink: 0,
+              }}>
+                <Image src={opt.mediaUrl || placeholderUrl} alt={opt.titel} fill priority style={{ objectFit: "cover" }} />
+                {showShimmer && placeholderStates[i] && <ImageShimmer label="Creating" />}
+
+                {/* Bottom overlay */}
+                <div style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  padding: r.spacing.medium,
+                  paddingBottom: r.tabbarHeight + 18,
+                  color: "white",
+                  background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 100%)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: r.spacing.small }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: r.fontSize.title + 2, fontWeight: 900, letterSpacing: -0.3 }}>{opt.titel}</div>
+                      <div style={{ fontSize: r.fontSize.body, opacity: 0.8, marginTop: 6 }}>{opt.beschreibung}</div>
+
+                      {/* Swipe up hint */}
+                      <div style={{
+                        marginTop: 14,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        opacity: 0.5,
+                        fontSize: r.fontSize.small,
+                      }}>
+                        <span style={{ fontSize: 16, lineHeight: 1 }}>↑</span>
+                        <span>Nach oben wischen zum Erkunden</span>
+                      </div>
+                    </div>
+                    <ActionRail disabled={!isOpen} items={[
+                      { icon: faHeart, active: likedStates[i], count: likeCounts[i], onClick: () => toggleLike(opt.id) },
+                      { icon: faCheckToSlot, active: votedOptionId === opt.id, activeColor: "#60a5fa", onClick: () => vote(opt.id) },
+                      { icon: faComment, count: commentCounts[i], onClick: () => openComments(opt.id) },
+                      { icon: faShare, onClick: () => shareOption(opt.id) },
+                    ]} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Dot indicators */}
+          <div style={{
+            position: "absolute",
+            bottom: r.tabbarHeight + 4,
+            left: 0,
+            right: 0,
+            display: "flex",
+            justifyContent: "center",
+            gap: 8,
+            zIndex: 10,
+          }}>
+            {[0, 1].map((i) => (
+              <button
+                key={i}
+                onClick={() => setActiveCard(i as 0 | 1)}
+                style={{
+                  width: activeCard === i ? 20 : 8,
+                  height: 8,
+                  borderRadius: 4,
+                  border: "none",
+                  background: activeCard === i ? "white" : "rgba(255,255,255,0.4)",
+                  cursor: "pointer",
+                  transition: "all 0.25s ease",
+                  padding: 0,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {showReveal && revealNode && (
+          <DiscoveryRevealCard
+            titel={revealNode.titel}
+            beschreibung={revealNode.beschreibung}
+            context={revealNode.context}
+            isFirstExplorer={isDiscoverer}
+            onExplore={handleExplore}
+            onLater={() => setShowReveal(false)}
+          />
+        )}
+
+        {voterId && commentModalOptionId && (
+          <CommentBottomSheet
+            isOpen={commentModalOpen}
+            onClose={closeComments}
+            treeId={treeId}
+            treeVersion={TREE_VERSION}
+            optionId={commentModalOptionId}
+            voterId={voterId}
+            readOnly={!isOpen}
+          />
+        )}
+      </main>
+    );
+  }
+
+  // ====== LANDSCAPE / LARGE SPLIT MODE ======
   return (
     <main style={styles.shell}>
       <div style={styles.frame} {...swipe.bind()}>

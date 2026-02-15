@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import QRCode from "qrcode";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 type Token = {
   id: string;
@@ -60,6 +62,9 @@ export default function AdminPage() {
   // Image tasks
   const [imageTasks, setImageTasks] = useState<{ id: string; nodeId: string; nodeTitel: string; status: string; error: string | null; imageUrl: string | null; createdAt: string; startedAt: string | null; completedAt: string | null }[]>([]);
   const [imageTaskStats, setImageTaskStats] = useState<{ pending: number; generating: number; completed: number; failed: number }>({ pending: 0, generating: 0, completed: 0, failed: 0 });
+
+  // Admin section navigation
+  const [activeSection, setActiveSection] = useState<"session" | "tree" | "images" | "tokens">("session");
 
   // Countdown
   const [now, setNow] = useState(Date.now());
@@ -185,7 +190,8 @@ export default function AdminPage() {
   }
 
   function loginUrl(token: string) {
-    return `${window.location.origin}/login/${token}`;
+    const base = process.env.NEXT_PUBLIC_APP_URL || "https://raumvote.ch";
+    return `${base}/login/${token}`;
   }
 
   async function copyUrl(token: string) {
@@ -201,12 +207,57 @@ export default function AdminPage() {
       '<div class="qr-placeholder">QR-Code</div>',
       `<img src="${qrDataUrl}" alt="QR-Code" style="width:160px;height:160px;border-radius:12px;" />`
     );
-    const blob = new Blob([html], { type: "text/html" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `anleitung-${t.label || t.token.slice(0, 8)}.html`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+
+    // Render HTML in hidden iframe, capture to PDF
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;left:-9999px;top:0;width:794px;height:1123px;border:none;";
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iframeDoc) { document.body.removeChild(iframe); return; }
+    iframeDoc.open();
+    iframeDoc.write(html);
+    iframeDoc.close();
+
+    // Wait for images (QR code) to load
+    await new Promise((r) => setTimeout(r, 300));
+
+    const canvas = await html2canvas(iframeDoc.body, {
+      scale: 2,
+      width: 794,
+      windowWidth: 794,
+      backgroundColor: "#ffffff",
+    });
+    document.body.removeChild(iframe);
+
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfPageHeight = pdf.internal.pageSize.getHeight();
+
+    // Scale canvas to fit A4 width, then slice into pages
+    const scaledHeight = (canvas.height * pdfWidth) / canvas.width;
+    const totalPages = Math.ceil(scaledHeight / pdfPageHeight);
+
+    for (let page = 0; page < totalPages; page++) {
+      if (page > 0) pdf.addPage();
+
+      // Crop a page-sized slice from the canvas
+      const sliceCanvas = document.createElement("canvas");
+      const sourceY = Math.round(page * (canvas.height / totalPages));
+      const sourceH = Math.min(Math.round(canvas.height / totalPages), canvas.height - sourceY);
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = sourceH;
+      const ctx = sliceCanvas.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+      ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceH, 0, 0, canvas.width, sourceH);
+
+      const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.95);
+      const sliceH = (sourceH * pdfWidth) / canvas.width;
+      pdf.addImage(sliceData, "JPEG", 0, 0, pdfWidth, sliceH);
+    }
+
+    pdf.save(`anleitung-${t.label || t.token.slice(0, 8)}.pdf`);
   }
 
   async function downloadAllQR() {
@@ -493,16 +544,36 @@ export default function AdminPage() {
   }
 
   // --- Main admin view ---
+  const sections = [
+    { key: "session" as const, label: "Periode" },
+    { key: "tree" as const, label: "Baum" },
+    { key: "images" as const, label: "Bilder" },
+    { key: "tokens" as const, label: "Tokens" },
+  ];
+
   return (
     <main style={s.shell}>
-      <div style={s.container}>
-        <div style={s.h1}>Admin</div>
-        <div style={s.sub}>Voting-Perioden &amp; Token-Verwaltung</div>
+      {/* Section tab bar */}
+      <nav style={s.tabBar}>
+        {sections.map((sec) => (
+          <button
+            key={sec.key}
+            onClick={() => setActiveSection(sec.key)}
+            style={{
+              ...s.tabBtn,
+              ...(activeSection === sec.key ? s.tabBtnActive : {}),
+            }}
+          >
+            {sec.label}
+          </button>
+        ))}
+      </nav>
 
+      <div style={s.container}>
         {error && <div style={{ ...s.error, marginBottom: 12 }}>{error}</div>}
 
         {/* ===== VOTING SESSION SECTION ===== */}
-        <section style={s.card}>
+        {activeSection === "session" && <section style={s.card}>
           <div style={s.cardTitle}>Voting-Periode</div>
 
           {!currentSession && !showCreateSession && (
@@ -609,10 +680,10 @@ export default function AdminPage() {
               ))}
             </div>
           )}
-        </section>
+        </section>}
 
         {/* ===== TREE CONFIG SECTION ===== */}
-        <section style={s.card}>
+        {activeSection === "tree" && <section style={s.card}>
           <div style={s.cardTitle}>AI-Entscheidungsbaum</div>
 
           {treeConfig ? (
@@ -813,10 +884,13 @@ export default function AdminPage() {
               </div>
             </div>
           )}
-        </section>
+        </section>}
 
         {/* ===== IMAGE TASK QUEUE ===== */}
-        {treeConfig && (
+        {activeSection === "images" && !treeConfig && (
+          <section style={s.card}><div style={s.muted}>Zuerst einen Baum unter &quot;Baum&quot; erstellen.</div></section>
+        )}
+        {activeSection === "images" && treeConfig && (
           <section style={s.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={s.cardTitle}>Bildgenerierung</div>
@@ -933,6 +1007,7 @@ export default function AdminPage() {
         )}
 
         {/* ===== TOKEN SECTION ===== */}
+        {activeSection === "tokens" && <>
         <div style={{ ...s.h1, fontSize: 18, marginTop: 8 }}>Token-Verwaltung</div>
         <div style={s.sub}>{tokens.length} Tokens gesamt, {tokens.filter((t) => t.active).length} aktiv</div>
 
@@ -1011,6 +1086,7 @@ export default function AdminPage() {
             </div>
           )}
         </section>
+        </>}
       </div>
     </main>
   );
@@ -1019,7 +1095,7 @@ export default function AdminPage() {
 const s: Record<string, React.CSSProperties> = {
   shell: { position: "fixed", inset: 0, background: "black", color: "white", overflow: "auto", zIndex: 1 },
   center: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100dvh", gap: 12, padding: 24 },
-  container: { width: "min(700px, 100vw)", margin: "0 auto", padding: "18px 14px 110px" },
+  container: { width: "min(700px, 100vw)", margin: "0 auto", padding: "64px 14px 24px" },
   h1: { fontSize: 22, fontWeight: 950, letterSpacing: -0.3 },
   sub: { fontSize: 12, opacity: 0.7, marginTop: 4, marginBottom: 14 },
 
@@ -1094,4 +1170,37 @@ const s: Record<string, React.CSSProperties> = {
   tokenCode: { fontSize: 11, opacity: 0.6, fontFamily: "monospace", marginTop: 2 },
   tokenMeta: { fontSize: 11, opacity: 0.5, marginTop: 2 },
   tokenActions: { display: "flex", gap: 4, flexShrink: 0, flexWrap: "wrap" },
+
+  tabBar: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 48,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    background: "rgba(0,0,0,0.85)",
+    backdropFilter: "blur(18px)",
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
+    zIndex: 50,
+    padding: "0 12px",
+  },
+  tabBtn: {
+    border: "none",
+    background: "transparent",
+    color: "white",
+    opacity: 0.5,
+    fontSize: 13,
+    fontWeight: 800,
+    padding: "8px 16px",
+    cursor: "pointer",
+    borderBottom: "2px solid transparent",
+    transition: "opacity 0.15s, border-color 0.15s",
+  },
+  tabBtnActive: {
+    opacity: 1,
+    borderBottomColor: "white",
+  },
 };

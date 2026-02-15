@@ -18,6 +18,8 @@ export default function GlobalTabbar() {
   const { session } = useSession();
   const r = useResponsive();
 
+  if (pathname.startsWith("/admin") || pathname.startsWith("/login") || pathname === "/denied") return null;
+
   const tabbar: React.CSSProperties = {
     position: "fixed",
     left: r.spacing.medium,
