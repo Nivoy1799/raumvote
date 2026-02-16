@@ -17,6 +17,13 @@ import { useResponsive } from "@/lib/useResponsive";
 
 const TREE_VERSION = "dynamic";
 
+const GENERATING_MESSAGES = [
+  "Generiere neue Realitäten",
+  "Wie könnte dein Platz noch aussehen",
+  "Vibing....",
+  "Feels like new home",
+];
+
 function isPlaceholder(url: string | null | undefined, placeholderUrl: string): boolean {
   return !url || url === placeholderUrl || url === "/media/placeholder.jpg";
 }
@@ -143,10 +150,18 @@ export default function NodePage() {
   const dragStartRef = useRef<{ x: number; y: number; axis: "x" | "y" | null } | null>(null);
   const [idleTilt, setIdleTilt] = useState(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showSwipeUpHint, setShowSwipeUpHint] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return (parseInt(localStorage.getItem("rv-swipeup-count") || "0", 10) || 0) < 3;
-  });
+  const swipeUpLearnedRef = useRef(
+    typeof window !== "undefined" && (parseInt(localStorage.getItem("rv-swipeup-count") || "0", 10) || 0) >= 3
+  );
+  const [arrivalInfo, setArrivalInfo] = useState<string | null>(null);
+  const [genMsgIdx, setGenMsgIdx] = useState(0);
+
+  // Cycle generating messages
+  useEffect(() => {
+    if (!generating) { setGenMsgIdx(0); return; }
+    const iv = setInterval(() => setGenMsgIdx((i) => (i + 1) % GENERATING_MESSAGES.length), 2800);
+    return () => clearInterval(iv);
+  }, [generating]);
 
   // Stable ref for placeholderUrl to avoid dep issues
   const phRef = useRef(placeholderUrl);
@@ -329,9 +344,15 @@ export default function NodePage() {
     }
   }
 
-  // Reset to center view when navigating to a new node
+  // Reset to center view when navigating to a new node + show arrival info
   useEffect(() => {
     setActiveCard(null);
+    const dir = sessionStorage.getItem("rv-arrival-direction");
+    if (dir) {
+      sessionStorage.removeItem("rv-arrival-direction");
+      setArrivalInfo(dir);
+      setTimeout(() => setArrivalInfo(null), 3500);
+    }
   }, [nodeId]);
 
   useEffect(() => {
@@ -392,13 +413,15 @@ export default function NodePage() {
     setIsDragging(false);
     setDragOffset(0);
 
-    // Vertical swipe up — navigate into subtree (only when on a card)
+    // Vertical swipe up — navigate into subtree (only when focused on a card)
     if (axis === "y" && dy < -70 && activeCard !== null) {
       if (left && right) {
         const count = (parseInt(localStorage.getItem("rv-swipeup-count") || "0", 10) || 0) + 1;
         localStorage.setItem("rv-swipeup-count", String(count));
-        if (count >= 3) setShowSwipeUpHint(false);
-        navigate(activeCard === 0 ? left : right);
+        swipeUpLearnedRef.current = count >= 3;
+        const target = activeCard === 0 ? left : right;
+        sessionStorage.setItem("rv-arrival-direction", target.titel);
+        navigate(target);
       }
       return;
     }
@@ -465,13 +488,8 @@ export default function NodePage() {
               }} />
             </div>
             <div style={{ fontSize: r.fontSize.title, fontWeight: 900, marginBottom: 8 }}>
-              {generating ? "Generating" : "Loading"}
+              {generating ? GENERATING_MESSAGES[genMsgIdx] : "Loading"}
             </div>
-            {generating && (
-              <div style={{ fontSize: r.fontSize.small, opacity: 0.5, maxWidth: 220, margin: "0 auto" }}>
-                AI is creating new paths for you
-              </div>
-            )}
           </div>
         </div>
       </>
@@ -592,13 +610,24 @@ export default function NodePage() {
           }
           @keyframes rv-swipe-up-hint {
             0%, 100% { transform: translateY(0); opacity: 0.5; }
-            50% { transform: translateY(-6px); opacity: 0.9; }
+            50% { transform: translateY(-8px); opacity: 0.95; }
+          }
+          @keyframes rv-nudge-left {
+            0%, 100% { transform: translateX(0); opacity: 0.5; }
+            50% { transform: translateX(-6px); opacity: 0.8; }
+          }
+          @keyframes rv-nudge-right {
+            0%, 100% { transform: translateX(0); opacity: 0.5; }
+            50% { transform: translateX(6px); opacity: 0.8; }
+          }
+          @keyframes rv-toast-in {
+            0% { opacity: 0; transform: translateY(-10px); }
+            100% { opacity: 1; transform: translateY(0); }
           }
           @keyframes rv-center-wobble {
-            0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(-0.3deg); }
-            50% { transform: rotate(0.3deg); }
-            75% { transform: rotate(-0.15deg); }
+            0%, 100% { transform: translateX(0); }
+            30% { transform: translateX(-3px); }
+            70% { transform: translateX(3px); }
           }
         `}</style>
         <div style={{ ...styles.frame, touchAction: "none" }} {...carouselBind}>
@@ -640,23 +669,68 @@ export default function NodePage() {
             </div>
           </header>
 
+          {/* Arrival info toast — shown briefly after navigating deeper */}
+          {arrivalInfo && (
+            <div style={{
+              position: "absolute",
+              top: 14,
+              left: 20,
+              right: 20,
+              zIndex: 12,
+              background: "rgba(255,255,255,0.12)",
+              backdropFilter: "blur(16px)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: 14,
+              padding: "12px 16px",
+              color: "white",
+              textAlign: "center",
+              pointerEvents: "none",
+              animation: "rv-toast-in 0.3s ease-out",
+            }}>
+              <div style={{ fontSize: r.fontSize.body, fontWeight: 800 }}>
+                Richtung: {arrivalInfo}
+              </div>
+              <div style={{ fontSize: r.fontSize.small, opacity: 0.6, marginTop: 4 }}>
+                Wische zur Seite um beide Optionen zu sehen
+              </div>
+            </div>
+          )}
+
           {/* Center hint — visible only when in 50/50 view */}
           {!isFocused && (
             <div style={{
               position: "absolute",
-              top: 16,
+              top: 0,
               left: 0,
               right: 0,
+              bottom: 0,
               zIndex: 10,
-              textAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               color: "white",
-              opacity: 0.6,
-              fontSize: r.fontSize.small,
-              fontWeight: 700,
-              letterSpacing: 0.5,
               pointerEvents: "none",
+              gap: 16,
             }}>
-              Wische um zu wählen
+              {/* Left arrow */}
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.5, animation: "rv-nudge-left 2s ease-in-out infinite" }}>
+                <path d="M15 4l-8 8 8 8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <div style={{ textAlign: "center" }}>
+                <div style={{
+                  fontSize: r.fontSize.title + 2,
+                  fontWeight: 950,
+                  letterSpacing: 0.3,
+                  opacity: 0.9,
+                  textShadow: "0 2px 12px rgba(0,0,0,0.9)",
+                }}>
+                  Wische zur Seite
+                </div>
+              </div>
+              {/* Right arrow */}
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.5, animation: "rv-nudge-right 2s ease-in-out infinite" }}>
+                <path d="M9 4l8 8-8 8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </div>
           )}
 
@@ -686,11 +760,11 @@ export default function NodePage() {
                 <Image src={opt.mediaUrl || placeholderUrl} alt={opt.titel} fill priority style={{ objectFit: "cover" }} />
                 {showShimmer && placeholderStates[i] && <ImageShimmer label="Creating" />}
 
-                {/* Swipe-up hint — visible when card is focused, hidden after 3 successful swipes */}
-                {showSwipeUpHint && isFocused && activeCard === i && (
+                {/* Swipe-up hint — visible when card is focused, hidden after learned */}
+                {!swipeUpLearnedRef.current && isFocused && activeCard === i && (
                   <div style={{
                     position: "absolute",
-                    top: "32%",
+                    top: "38%",
                     left: 0,
                     right: 0,
                     display: "flex",
@@ -700,18 +774,18 @@ export default function NodePage() {
                     pointerEvents: "none",
                     animation: "rv-swipe-up-hint 2.5s ease-in-out infinite",
                   }}>
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.8 }}>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.7 }}>
                       <path d="M12 4l-6 6h4v9h4v-9h4l-6-6z" fill="white" />
                     </svg>
                     <span style={{
                       color: "white",
-                      fontSize: 14,
+                      fontSize: r.fontSize.body,
                       fontWeight: 800,
                       opacity: 0.7,
                       letterSpacing: 0.5,
                       textShadow: "0 2px 6px rgba(0,0,0,0.7)",
                     }}>
-                      Vertiefen
+                      Nach oben wischen
                     </span>
                   </div>
                 )}

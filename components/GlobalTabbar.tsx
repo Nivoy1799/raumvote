@@ -36,15 +36,27 @@ export default function GlobalTabbar() {
     zIndex: 100,
   };
 
+  const blocker: React.CSSProperties = {
+    position: "fixed",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: r.tabbarHeight + r.spacing.medium * 2,
+    zIndex: 100,
+    pointerEvents: "none",
+  };
+
   return (
     <>
       <SessionBanner session={session} />
-      <footer style={tabbar}>
-        <Tab icon={faHouse} active={pathname.startsWith("/start")} onClick={() => router.push("/start")} iconSize={r.fontSize.button + 4} />
-        <Tab icon={faChartSimple} active={pathname.startsWith("/results")} onClick={() => router.push("/results")} iconSize={r.fontSize.button + 4} />
-        <Tab icon={faWandSparkles} active={pathname.startsWith("/dream")} onClick={() => router.push("/dream")} iconSize={r.fontSize.button + 4} />
-        <Tab icon={faUser} active={pathname.startsWith("/me")} onClick={() => router.push("/me")} iconSize={r.fontSize.button + 4} />
-      </footer>
+      <div style={blocker}>
+        <footer style={{ ...tabbar, pointerEvents: "auto" }}>
+          <Tab icon={faHouse} active={pathname.startsWith("/start")} onClick={() => router.push("/start")} iconSize={r.fontSize.button + 4} />
+          <Tab icon={faChartSimple} active={pathname.startsWith("/results")} onClick={() => router.push("/results")} iconSize={r.fontSize.button + 4} />
+          <Tab icon={faWandSparkles} active={pathname.startsWith("/dream")} onClick={() => router.push("/dream")} iconSize={r.fontSize.button + 4} />
+          <Tab icon={faUser} active={pathname.startsWith("/me")} onClick={() => router.push("/me")} iconSize={r.fontSize.button + 4} />
+        </footer>
+      </div>
     </>
   );
 }
