@@ -155,6 +155,8 @@ export default function NodePage() {
   );
   const [arrivalInfo, setArrivalInfo] = useState<string | null>(null);
   const [genMsgIdx, setGenMsgIdx] = useState(0);
+  const [showFirstLikeCelebration, setShowFirstLikeCelebration] = useState(false);
+  const [showFirstVoteCelebration, setShowFirstVoteCelebration] = useState(false);
 
   // Cycle generating messages
   useEffect(() => {
@@ -269,17 +271,28 @@ export default function NodePage() {
 
   async function vote(optionId: string) {
     if (!voterId) return;
+    navigator.vibrate?.([20, 10, 20]);
+    const isFirstVote = typeof window !== "undefined" && !localStorage.getItem("rv-first-vote-done");
     const res = await fetch("/api/vote", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ treeId, treeVersion: TREE_VERSION, voterId, optionId }),
     });
     const data = await res.json().catch(() => null);
-    if (data?.ok) setVotedOptionId(data.optionId ?? null);
+    if (data?.ok) {
+      setVotedOptionId(data.optionId ?? null);
+      if (isFirstVote) {
+        localStorage.setItem("rv-first-vote-done", "1");
+        setShowFirstVoteCelebration(true);
+        setTimeout(() => setShowFirstVoteCelebration(false), 4000);
+      }
+    }
   }
 
   async function toggleLike(optionId: string) {
     if (!voterId) return;
+    navigator.vibrate?.(30);
+    const isFirstLike = typeof window !== "undefined" && !localStorage.getItem("rv-first-like-done");
     const res = await fetch("/api/like", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -295,9 +308,15 @@ export default function NodePage() {
       setLikedRight(!!data.liked);
       setLikeCountRight((c) => c + (data.liked ? 1 : -1));
     }
+    if (data?.liked && isFirstLike) {
+      localStorage.setItem("rv-first-like-done", "1");
+      setShowFirstLikeCelebration(true);
+      setTimeout(() => setShowFirstLikeCelebration(false), 4000);
+    }
   }
 
   function openComments(optionId: string) {
+    navigator.vibrate?.(15);
     setCommentModalOptionId(optionId);
     setCommentModalOpen(true);
   }
@@ -315,6 +334,7 @@ export default function NodePage() {
   }
 
   async function shareOption(optionId: string) {
+    navigator.vibrate?.(20);
     const url = `${window.location.origin}/o/${encodeURIComponent(optionId)}`;
     if (navigator.share) {
       await navigator.share({ title: "RaumVote", url });
@@ -602,15 +622,13 @@ export default function NodePage() {
       <main style={styles.shell}>
         <style>{`
           @keyframes rv-tilt-hint {
-            0%, 100% { transform: translateX(calc(${activeCard === null ? "-50% - 6px" : `${-(activeCard ?? 0) * 100}%`} + 0px)) rotate(0deg); }
-            20% { transform: translateX(calc(${activeCard === null ? "-50% - 6px" : `${-(activeCard ?? 0) * 100}%`} + 18px)) rotate(0.8deg); }
-            40% { transform: translateX(calc(${activeCard === null ? "-50% - 6px" : `${-(activeCard ?? 0) * 100}%`} + -14px)) rotate(-0.6deg); }
-            60% { transform: translateX(calc(${activeCard === null ? "-50% - 6px" : `${-(activeCard ?? 0) * 100}%`} + 8px)) rotate(0.3deg); }
-            80% { transform: translateX(calc(${activeCard === null ? "-50% - 6px" : `${-(activeCard ?? 0) * 100}%`} + -4px)) rotate(-0.15deg); }
+            0%, 100% { transform: translateX(calc(${activeCard === null ? "-50% - 6px" : `${-(activeCard ?? 0) * 100}%`})) translateY(0); }
+            50% { transform: translateX(calc(${activeCard === null ? "-50% - 6px" : `${-(activeCard ?? 0) * 100}%`})) translateY(-12px); }
           }
           @keyframes rv-swipe-up-hint {
-            0%, 100% { transform: translateY(0); opacity: 0.5; }
-            50% { transform: translateY(-8px); opacity: 0.95; }
+            0%, 15% { transform: translateY(0); opacity: 1; }
+            50% { transform: translateY(-10px); opacity: 1; }
+            85%, 100% { transform: translateY(0); opacity: 0; }
           }
           @keyframes rv-nudge-left {
             0%, 100% { transform: translateX(0); opacity: 0.5; }
@@ -764,26 +782,26 @@ export default function NodePage() {
                 {!swipeUpLearnedRef.current && isFocused && activeCard === i && (
                   <div style={{
                     position: "absolute",
-                    top: "38%",
+                    top: "35%",
                     left: 0,
                     right: 0,
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    gap: 6,
+                    gap: 8,
                     pointerEvents: "none",
-                    animation: "rv-swipe-up-hint 2.5s ease-in-out infinite",
+                    animation: "rv-swipe-up-hint 6s ease-in-out infinite",
                   }}>
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.7 }}>
+                    <svg width="52" height="52" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.85 }}>
                       <path d="M12 4l-6 6h4v9h4v-9h4l-6-6z" fill="white" />
                     </svg>
                     <span style={{
                       color: "white",
-                      fontSize: r.fontSize.body,
-                      fontWeight: 800,
-                      opacity: 0.7,
-                      letterSpacing: 0.5,
-                      textShadow: "0 2px 6px rgba(0,0,0,0.7)",
+                      fontSize: r.fontSize.title - 2,
+                      fontWeight: 850,
+                      opacity: 0.85,
+                      letterSpacing: 0.3,
+                      textShadow: "0 2px 8px rgba(0,0,0,0.8)",
                     }}>
                       Nach oben wischen
                     </span>
@@ -894,6 +912,105 @@ export default function NodePage() {
             readOnly={!isOpen}
           />
         )}
+
+        {/* First Like Celebration */}
+        {showFirstLikeCelebration && (
+          <div style={{
+            position: "fixed",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.7)",
+            zIndex: 300,
+            backdropFilter: "blur(8px)",
+            animation: "rv-celebration-in 0.4s ease-out",
+          }}>
+            <div style={{
+              textAlign: "center",
+              padding: r.spacing.medium,
+              background: "rgba(255,255,255,0.95)",
+              borderRadius: 24,
+              maxWidth: 280,
+            }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>❤️</div>
+              <div style={{ fontSize: r.fontSize.title, fontWeight: 950, color: "black", marginBottom: 8 }}>
+                Dein erstes Like!
+              </div>
+              <div style={{ fontSize: r.fontSize.body, color: "rgba(0,0,0,0.7)", marginBottom: 16 }}>
+                Deine Likes sind jetzt sichtbar in deinem Profil unter <strong>/me</strong>
+              </div>
+              <button
+                onClick={() => setShowFirstLikeCelebration(false)}
+                style={{
+                  background: "#60a5fa",
+                  color: "white",
+                  border: "none",
+                  padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`,
+                  borderRadius: 12,
+                  fontSize: r.fontSize.body,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                Verstanden!
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* First Vote Celebration */}
+        {showFirstVoteCelebration && (
+          <div style={{
+            position: "fixed",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.7)",
+            zIndex: 300,
+            backdropFilter: "blur(8px)",
+            animation: "rv-celebration-in 0.4s ease-out",
+          }}>
+            <div style={{
+              textAlign: "center",
+              padding: r.spacing.medium,
+              background: "rgba(255,255,255,0.95)",
+              borderRadius: 24,
+              maxWidth: 280,
+            }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🎉</div>
+              <div style={{ fontSize: r.fontSize.title, fontWeight: 950, color: "black", marginBottom: 8 }}>
+                Deine erste Abstimmung!
+              </div>
+              <div style={{ fontSize: r.fontSize.body, color: "rgba(0,0,0,0.7)", marginBottom: 16 }}>
+                Du hast dich entschieden! Erkunde weiter, um deine Reise zu formen.
+              </div>
+              <button
+                onClick={() => setShowFirstVoteCelebration(false)}
+                style={{
+                  background: "#60a5fa",
+                  color: "white",
+                  border: "none",
+                  padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`,
+                  borderRadius: 12,
+                  fontSize: r.fontSize.body,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                Vielen Dank!
+              </button>
+            </div>
+          </div>
+        )}
+
+        <style>{`
+          @keyframes rv-celebration-in {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+          }
+        `}</style>
       </main>
     );
   }
