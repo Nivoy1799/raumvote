@@ -6,10 +6,10 @@ export async function GET() {
   // Return the most relevant session: active first, then most recent
   const session = await prisma.votingSession.findFirst({
     where: { status: { in: ["active", "draft"] } },
-    orderBy: [{ status: "asc" }, { createdAt: "desc" }], // "active" < "draft" alphabetically
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
   });
 
-  // Fallback: most recent finished/cancelled
+  // Fallback: most recent archived
   const resolved = session ?? await prisma.votingSession.findFirst({
     orderBy: { updatedAt: "desc" },
   });
@@ -24,7 +24,6 @@ export async function GET() {
     session: {
       id: resolved.id,
       treeId: resolved.treeId,
-      treeVersion: resolved.treeVersion,
       title: resolved.title,
       status: resolved.status,
       durationDays: resolved.durationDays,
@@ -32,6 +31,9 @@ export async function GET() {
       endedAt: resolved.endedAt,
       deadline: deadline?.toISOString() ?? null,
       remainingMs: resolved.status === "active" ? remainingMs(resolved) : 0,
+      rootNodeId: resolved.rootNodeId,
+      placeholderUrl: resolved.placeholderUrl,
+      discoveryEnabled: resolved.discoveryEnabled,
     },
   });
 }

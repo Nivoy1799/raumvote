@@ -36,7 +36,7 @@ export async function GET(req: Request) {
 
   const result = likes.map((l) => ({
     id: l.id,
-    treeId: l.treeId,
+    sessionId: l.sessionId,
     optionId: l.optionId,
     createdAt: l.createdAt,
     node: nodeMap.get(l.optionId) ?? null,

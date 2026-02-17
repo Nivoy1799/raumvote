@@ -5,13 +5,15 @@ import { useEffect, useState } from "react";
 export type SessionInfo = {
   id: string;
   treeId: string;
-  treeVersion: string;
   title: string | null;
   status: string;
   durationDays: number;
   startedAt: string | null;
   deadline: string | null;
   remainingMs: number;
+  rootNodeId: string | null;
+  placeholderUrl: string;
+  discoveryEnabled: boolean;
 };
 
 export function useSession() {

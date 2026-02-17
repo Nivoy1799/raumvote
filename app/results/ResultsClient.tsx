@@ -11,31 +11,29 @@ import { useResponsive } from "@/lib/useResponsive";
 import { Leaderboard } from "@/components/Leaderboard";
 import { SessionTimeline } from "@/components/SessionTimeline";
 
-const TREE_VERSION = "dynamic";
-
 export default function ResultsClient() {
   const router = useRouter();
   const { voterId } = useAuth();
   const { session } = useSession();
   const r = useResponsive();
 
-  const [treeId, setTreeId] = useState("");
+  const [sessionId, setSessionId] = useState("");
   const [placeholderUrl, setPlaceholderUrl] = useState("/media/placeholder.jpg");
   const [myNode, setMyNode] = useState<TreeNodeData | null>(null);
 
   useEffect(() => {
     fetchActiveTreeMeta().then((m) => {
-      setTreeId(m.treeId);
+      setSessionId(m.sessionId);
       setPlaceholderUrl(m.placeholderUrl);
     });
   }, []);
 
   useEffect(() => {
-    if (!voterId || !treeId) return;
+    if (!voterId || !sessionId) return;
 
     (async () => {
       const res = await fetch(
-        `/api/vote/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&voterId=${encodeURIComponent(voterId)}`,
+        `/api/vote/status?sessionId=${encodeURIComponent(sessionId)}&voterId=${encodeURIComponent(voterId)}`,
         { cache: "no-store" }
       );
       const j = await res.json().catch(() => null);
@@ -48,7 +46,7 @@ export default function ResultsClient() {
       const n = await fetchSingleNode(optionId);
       setMyNode(n);
     })();
-  }, [voterId, treeId]);
+  }, [voterId, sessionId]);
 
   const isLrg = r.breakpoint === "large";
   const imgW = isLrg ? 140 : 96;
@@ -59,7 +57,7 @@ export default function ResultsClient() {
       <div style={{ width: r.maxWidth, margin: "0 auto", padding: `${r.spacing.medium + 2}px ${r.spacing.medium}px ${r.tabbarHeight + r.spacing.large}px` }}>
         <div style={{ display: "grid", gap: 4, marginBottom: r.spacing.medium }}>
           <div style={{ fontSize: r.fontSize.title + 3, fontWeight: 950, letterSpacing: -0.3 }}>Ergebnisse</div>
-          <div style={{ fontSize: r.fontSize.small, opacity: 0.7 }}>{treeId || "—"}</div>
+          <div style={{ fontSize: r.fontSize.small, opacity: 0.7 }}>{sessionId || "—"}</div>
         </div>
 
         <SessionTimeline session={session} />
@@ -91,7 +89,7 @@ export default function ResultsClient() {
           )}
         </section>
 
-        <Leaderboard treeId={treeId} treeVersion={TREE_VERSION} />
+        <Leaderboard sessionId={sessionId} />
       </div>
     </main>
   );

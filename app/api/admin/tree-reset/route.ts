@@ -8,35 +8,32 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { treeId, rootTitel, rootBeschreibung, rootContext } = body;
+  const { sessionId, rootTitel, rootBeschreibung, rootContext } = body;
 
-  if (!treeId || !rootTitel || !rootBeschreibung) {
+  if (!sessionId || !rootTitel || !rootBeschreibung) {
     return NextResponse.json(
-      { error: "Missing required fields: treeId, rootTitel, rootBeschreibung" },
+      { error: "Missing required fields: sessionId, rootTitel, rootBeschreibung" },
       { status: 400 }
     );
   }
 
-  // Verify tree exists
-  const tree = await prisma.treeConfig.findUnique({ where: { treeId } });
-  if (!tree) {
-    return NextResponse.json({ error: "Tree not found" }, { status: 404 });
+  const session = await prisma.votingSession.findUnique({ where: { id: sessionId } });
+  if (!session) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
   try {
-    // Delete all existing nodes for this tree
     await prisma.treeNode.deleteMany({
-      where: { treeId },
+      where: { sessionId },
     });
 
-    // Create new root node
     const newRoot = await prisma.treeNode.create({
       data: {
-        treeId,
+        sessionId,
         titel: rootTitel,
         beschreibung: rootBeschreibung,
         context: rootContext || "",
-        mediaUrl: tree.placeholderUrl,
+        mediaUrl: session.placeholderUrl,
         side: null,
         depth: 0,
         generated: false,
@@ -44,12 +41,9 @@ export async function POST(req: Request) {
       },
     });
 
-    // Update tree config to point to new root
-    await prisma.treeConfig.update({
-      where: { treeId },
-      data: {
-        rootNodeId: newRoot.id,
-      },
+    await prisma.votingSession.update({
+      where: { id: sessionId },
+      data: { rootNodeId: newRoot.id },
     });
 
     return NextResponse.json({

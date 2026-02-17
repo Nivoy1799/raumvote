@@ -2,17 +2,18 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const config = await prisma.treeConfig.findFirst({
-    orderBy: { createdAt: "desc" },
+  const session = await prisma.votingSession.findFirst({
+    where: { status: "active" },
+    orderBy: { startedAt: "desc" },
   });
 
-  if (!config || !config.rootNodeId) {
+  if (!session || !session.rootNodeId) {
     return NextResponse.json({ error: "No active tree configured" }, { status: 404 });
   }
 
   return NextResponse.json({
-    treeId: config.treeId,
-    rootNodeId: config.rootNodeId,
-    placeholderUrl: config.placeholderUrl,
+    sessionId: session.id,
+    rootNodeId: session.rootNodeId,
+    placeholderUrl: session.placeholderUrl,
   });
 }

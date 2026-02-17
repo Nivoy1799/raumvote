@@ -6,9 +6,9 @@ import { getActiveSession, isSessionOpen } from "@/lib/votingSession";
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { treeId, treeVersion, optionId, voterId } = body;
+  const { sessionId, optionId, voterId } = body;
 
-  if (!treeId || !treeVersion || !optionId || !voterId) {
+  if (!sessionId || !optionId || !voterId) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   const voterHash = hashVoterId(voterId);
 
   const existing = await prisma.vote.findUnique({
-    where: { treeId_treeVersion_voterHash: { treeId, treeVersion, voterHash } },
+    where: { sessionId_voterHash: { sessionId, voterHash } },
   });
 
   if (existing && existing.optionId === optionId) {
@@ -33,8 +33,8 @@ export async function POST(req: Request) {
   }
 
   await prisma.vote.upsert({
-    where: { treeId_treeVersion_voterHash: { treeId, treeVersion, voterHash } },
-    create: { treeId, treeVersion, voterHash, optionId },
+    where: { sessionId_voterHash: { sessionId, voterHash } },
+    create: { sessionId, voterHash, optionId },
     update: { optionId },
   });
 

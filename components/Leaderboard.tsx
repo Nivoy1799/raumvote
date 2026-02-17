@@ -8,18 +8,15 @@ import { useResponsive } from "@/lib/useResponsive";
 
 type LeaderRow = { optionId: string; count: number };
 type ResultsPayload = {
-  treeId: string;
-  treeVersion: string;
+  sessionId: string;
   totalVotes: number;
   leaderboard: LeaderRow[];
 };
 
 export const Leaderboard = memo(function Leaderboard({
-  treeId,
-  treeVersion,
+  sessionId,
 }: {
-  treeId: string;
-  treeVersion: string;
+  sessionId: string;
 }) {
   const router = useRouter();
   const r = useResponsive();
@@ -29,19 +26,19 @@ export const Leaderboard = memo(function Leaderboard({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!treeId || !treeVersion) return;
+    if (!sessionId) return;
 
     (async () => {
       setLoading(true);
       const res = await fetch(
-        `/api/results?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}`,
+        `/api/results?sessionId=${encodeURIComponent(sessionId)}`,
         { cache: "no-store" }
       );
       const j = await res.json().catch(() => null);
       setData(j);
       setLoading(false);
     })();
-  }, [treeId, treeVersion]);
+  }, [sessionId]);
 
   useEffect(() => {
     if (!data) return;

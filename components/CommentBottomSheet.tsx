@@ -19,14 +19,13 @@ type Comment = {
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  treeId: string;
-  treeVersion: string;
+  sessionId: string;
   optionId: string;
   voterId: string;
   readOnly?: boolean;
 };
 
-export function CommentBottomSheet({ isOpen, onClose, treeId, treeVersion, optionId, voterId, readOnly }: Props) {
+export function CommentBottomSheet({ isOpen, onClose, sessionId, optionId, voterId, readOnly }: Props) {
   const r = useResponsive();
   const [comments, setComments] = useState<Comment[]>([]);
   const [text, setText] = useState("");
@@ -38,13 +37,13 @@ export function CommentBottomSheet({ isOpen, onClose, treeId, treeVersion, optio
   useEffect(() => {
     if (!isOpen || !voterId) return;
     fetch(
-      `/api/comment?treeId=${encodeURIComponent(treeId)}&treeVersion=${encodeURIComponent(treeVersion)}&optionId=${encodeURIComponent(optionId)}&voterId=${encodeURIComponent(voterId)}`,
+      `/api/comment?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(optionId)}&voterId=${encodeURIComponent(voterId)}`,
       { cache: "no-store" }
     )
       .then((r) => r.json())
       .then((d) => setComments(d.comments ?? []))
       .catch(() => {});
-  }, [isOpen, treeId, treeVersion, optionId, voterId]);
+  }, [isOpen, sessionId, optionId, voterId]);
 
   // Reset reply state when sheet closes
   useEffect(() => {
@@ -63,8 +62,7 @@ export function CommentBottomSheet({ isOpen, onClose, treeId, treeVersion, optio
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          treeId,
-          treeVersion,
+          sessionId,
           optionId,
           voterId,
           text,

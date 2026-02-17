@@ -6,12 +6,11 @@ import { getActiveSession, isSessionOpen } from "@/lib/votingSession";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const treeId = searchParams.get("treeId") ?? "";
-  const treeVersion = searchParams.get("treeVersion") ?? "";
+  const sessionId = searchParams.get("sessionId") ?? "";
   const optionId = searchParams.get("optionId") ?? "";
   const voterId = searchParams.get("voterId") ?? "";
 
-  if (!treeId || !treeVersion || !optionId || !voterId) {
+  if (!sessionId || !optionId || !voterId) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
 
@@ -22,7 +21,7 @@ export async function GET(req: Request) {
   const voterHash = hashVoterId(voterId);
 
   const comments = await prisma.comment.findMany({
-    where: { treeId, treeVersion, optionId },
+    where: { sessionId, optionId },
     orderBy: { createdAt: "asc" },
     include: { likes: { select: { voterHash: true } } },
   });
@@ -50,9 +49,9 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { treeId, treeVersion, optionId, voterId, text, parentId } = body;
+  const { sessionId, optionId, voterId, text, parentId } = body;
 
-  if (!treeId || !treeVersion || !optionId || !voterId || !text) {
+  if (!sessionId || !optionId || !voterId || !text) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
 
@@ -70,7 +69,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid text length" }, { status: 400 });
   }
 
-  // Validate parentId if provided
   if (parentId) {
     const parent = await prisma.comment.findUnique({ where: { id: parentId } });
     if (!parent) {
@@ -87,8 +85,7 @@ export async function POST(req: Request) {
 
   const comment = await prisma.comment.create({
     data: {
-      treeId,
-      treeVersion,
+      sessionId,
       optionId,
       voterHash,
       text: trimmed,

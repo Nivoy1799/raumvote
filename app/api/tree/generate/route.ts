@@ -29,27 +29,49 @@ async function buildEpisode(nodeId: string): Promise<EpisodeStep[]> {
   return path;
 }
 
+async function generateImageForNode(
+  node: { id: string; titel: string; beschreibung: string; context: string },
+  sessionId: string,
+  imageConfig: { imageModel: string; imagePrompt: string | null; referenceMedia: string[] },
+): Promise<void> {
+  const task = await prisma.imageTask.create({
+    data: { sessionId, nodeId: node.id, nodeTitel: node.titel, status: "pending" },
+  });
+  await prisma.imageTask.update({ where: { id: task.id }, data: { status: "generating", startedAt: new Date() } });
+  try {
+    const prompt = buildImagePrompt(node, imageConfig.imagePrompt);
+    const imgUrl = await generateNodeImage(prompt, node.id, imageConfig);
+    if (imgUrl) {
+      await prisma.treeNode.update({ where: { id: node.id }, data: { mediaUrl: imgUrl } });
+      await prisma.imageTask.update({ where: { id: task.id }, data: { status: "completed", imageUrl: imgUrl, completedAt: new Date() } });
+    } else {
+      await prisma.imageTask.update({ where: { id: task.id }, data: { status: "failed", error: "Generation returned null", completedAt: new Date() } });
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await prisma.imageTask.update({ where: { id: task.id }, data: { status: "failed", error: msg, completedAt: new Date() } });
+  }
+}
+
 async function preGenerateDescendants(
   nodeId: string,
-  treeId: string,
+  sessionId: string,
   currentDepth: number,
-  config: any
+  config: { systemPrompt: string; modelName: string; placeholderUrl: string; imageModel: string; imagePrompt: string | null; referenceMedia: string[] },
 ): Promise<void> {
-  // Stop recursion at max depth
   if (currentDepth >= PRE_LOAD_DEPTH) return;
 
   const node = await prisma.treeNode.findUnique({ where: { id: nodeId } });
   if (!node || node.generated) return;
 
   try {
-    // Generate children for this node
     const episode = await buildEpisode(nodeId);
     const generated = await generateTreeNodes(config.systemPrompt, episode, config.modelName);
 
     const [leftChild, rightChild] = await Promise.all([
       prisma.treeNode.create({
         data: {
-          treeId,
+          sessionId,
           titel: generated.left.titel,
           beschreibung: generated.left.beschreibung,
           context: generated.left.context,
@@ -57,12 +79,12 @@ async function preGenerateDescendants(
           side: "left",
           depth: currentDepth + 1,
           parentId: nodeId,
-          discovererHash: null, // Pre-generated nodes have no discoverer yet
+          discovererHash: null,
         },
       }),
       prisma.treeNode.create({
         data: {
-          treeId,
+          sessionId,
           titel: generated.right.titel,
           beschreibung: generated.right.beschreibung,
           context: generated.right.context,
@@ -70,12 +92,11 @@ async function preGenerateDescendants(
           side: "right",
           depth: currentDepth + 1,
           parentId: nodeId,
-          discovererHash: null, // Pre-generated nodes have no discoverer yet
+          discovererHash: null,
         },
       }),
     ]);
 
-    // Mark parent as generated
     await prisma.treeNode.update({
       where: { id: nodeId },
       data: {
@@ -84,10 +105,17 @@ async function preGenerateDescendants(
       },
     });
 
-    // Recursively pre-generate descendants
+    // Generate images for the new children
+    const imageConfig = { imageModel: config.imageModel, imagePrompt: config.imagePrompt, referenceMedia: config.referenceMedia };
     await Promise.all([
-      preGenerateDescendants(leftChild.id, treeId, currentDepth + 1, config),
-      preGenerateDescendants(rightChild.id, treeId, currentDepth + 1, config),
+      generateImageForNode(leftChild, sessionId, imageConfig),
+      generateImageForNode(rightChild, sessionId, imageConfig),
+    ]);
+
+    // Continue pre-generating deeper descendants
+    await Promise.all([
+      preGenerateDescendants(leftChild.id, sessionId, currentDepth + 1, config),
+      preGenerateDescendants(rightChild.id, sessionId, currentDepth + 1, config),
     ]);
   } catch (err) {
     console.error(`[preGenerate] Failed for node ${nodeId}:`, err);
@@ -108,7 +136,6 @@ export async function POST(req: Request) {
 
   const voterHash = hashVoterId(voterId);
 
-  // Check node exists and is not yet generated (race-condition safe)
   const node = await prisma.treeNode.findUnique({ where: { id: nodeId } });
   if (!node) {
     return NextResponse.json({ error: "Node not found" }, { status: 404 });
@@ -116,7 +143,10 @@ export async function POST(req: Request) {
 
   // If already generated, return existing children
   if (node.generated) {
-    const children = await prisma.treeNode.findMany({ where: { parentId: nodeId } });
+    const [children, totalNodes] = await Promise.all([
+      prisma.treeNode.findMany({ where: { parentId: nodeId } }),
+      prisma.treeNode.count({ where: { sessionId: node.sessionId } }),
+    ]);
     const left = children.find((c) => c.side === "left") ?? null;
     const right = children.find((c) => c.side === "right") ?? null;
     return NextResponse.json({
@@ -124,46 +154,51 @@ export async function POST(req: Request) {
       left,
       right,
       isDiscoverer: false,
+      totalNodes,
     });
   }
 
-  // Fetch tree config for system prompt
-  const config = await prisma.treeConfig.findUnique({ where: { treeId: node.treeId } });
-  if (!config) {
-    return NextResponse.json({ error: "Tree config not found" }, { status: 500 });
+  // Fetch session for config
+  const session = await prisma.votingSession.findUnique({ where: { id: node.sessionId } });
+  if (!session) {
+    return NextResponse.json({ error: "Session not found" }, { status: 500 });
   }
 
-  console.log("[generate] config.discoveryEnabled =", config.discoveryEnabled, "treeId =", config.treeId);
-
-  if (!config.discoveryEnabled) {
+  if (!session.discoveryEnabled) {
     return NextResponse.json({ error: "Discovery is currently disabled" }, { status: 403 });
+  }
+
+  if (session.status === "archived") {
+    return NextResponse.json({ error: "Session is archived" }, { status: 403 });
   }
 
   // Build episode and call OpenAI for immediate children
   const episode = await buildEpisode(nodeId);
-  const generated = await generateTreeNodes(config.systemPrompt, episode, config.modelName);
+  const generated = await generateTreeNodes(session.systemPrompt, episode, session.modelName);
 
-  // Create children + pre-generate descendants in a transaction
   const result = await prisma.$transaction(async (tx) => {
-    // Double-check not generated (race condition guard)
     const fresh = await tx.treeNode.findUnique({ where: { id: nodeId } });
     if (fresh?.generated) {
-      const children = await tx.treeNode.findMany({ where: { parentId: nodeId } });
+      const [children, totalNodes] = await Promise.all([
+        tx.treeNode.findMany({ where: { parentId: nodeId } }),
+        tx.treeNode.count({ where: { sessionId: node.sessionId } }),
+      ]);
       return {
         node: fresh,
         left: children.find((c) => c.side === "left") ?? null,
         right: children.find((c) => c.side === "right") ?? null,
         isDiscoverer: false,
+        totalNodes,
       };
     }
 
     const leftChild = await tx.treeNode.create({
       data: {
-        treeId: node.treeId,
+        sessionId: node.sessionId,
         titel: generated.left.titel,
         beschreibung: generated.left.beschreibung,
         context: generated.left.context,
-        mediaUrl: config.placeholderUrl,
+        mediaUrl: session.placeholderUrl,
         side: "left",
         depth: node.depth + 1,
         parentId: nodeId,
@@ -173,11 +208,11 @@ export async function POST(req: Request) {
 
     const rightChild = await tx.treeNode.create({
       data: {
-        treeId: node.treeId,
+        sessionId: node.sessionId,
         titel: generated.right.titel,
         beschreibung: generated.right.beschreibung,
         context: generated.right.context,
-        mediaUrl: config.placeholderUrl,
+        mediaUrl: session.placeholderUrl,
         side: "right",
         depth: node.depth + 1,
         parentId: nodeId,
@@ -185,57 +220,59 @@ export async function POST(req: Request) {
       },
     });
 
-    const updatedNode = await tx.treeNode.update({
-      where: { id: nodeId },
-      data: {
-        generated: true,
-        question: generated.question,
-      },
-    });
+    const [updatedNode, totalNodes] = await Promise.all([
+      tx.treeNode.update({
+        where: { id: nodeId },
+        data: {
+          generated: true,
+          question: generated.question,
+        },
+      }),
+      tx.treeNode.count({ where: { sessionId: node.sessionId } }),
+    ]);
 
     return {
       node: updatedNode,
       left: leftChild,
       right: rightChild,
       isDiscoverer: true,
+      totalNodes,
     };
   });
 
-  // Fire-and-forget pre-generation of descendants (background job)
+  // Fire-and-forget pre-generation of descendants
   after(async () => {
     console.log("[generate] Starting background pre-generation for nodeId =", nodeId);
+    const config = { systemPrompt: session.systemPrompt, modelName: session.modelName, placeholderUrl: session.placeholderUrl, imageModel: session.imageModel, imagePrompt: session.imagePrompt, referenceMedia: session.referenceMedia };
     await Promise.all([
-      preGenerateDescendants(result.left!.id, node.treeId, node.depth + 2, config),
-      preGenerateDescendants(result.right!.id, node.treeId, node.depth + 2, config),
+      preGenerateDescendants(result.left!.id, node.sessionId, node.depth + 2, config),
+      preGenerateDescendants(result.right!.id, node.sessionId, node.depth + 2, config),
     ]);
     console.log("[generate] Finished pre-generation for nodeId =", nodeId);
   });
 
-  // Fire-and-forget image generation with task tracking (only if R2 is healthy)
+  // Fire-and-forget image generation with task tracking
   if (result.isDiscoverer && result.left && result.right) {
     const r2Status = await checkR2Health();
     if (!r2Status.ok) {
       console.error("[generate] R2 health check failed, skipping image generation:", r2Status.error);
       return NextResponse.json(result);
     }
-    console.log("[generate] R2 is healthy, starting image generation for nodeId =", nodeId);
     const leftId = result.left.id;
     const rightId = result.right.id;
-    const leftPrompt = buildImagePrompt(result.left, config.imagePrompt);
-    const rightPrompt = buildImagePrompt(result.right, config.imagePrompt);
+    const leftPrompt = buildImagePrompt(result.left, session.imagePrompt);
+    const rightPrompt = buildImagePrompt(result.right, session.imagePrompt);
     const imageConfig = {
-      imageModel: config.imageModel,
-      imagePrompt: config.imagePrompt,
-      referenceMedia: config.referenceMedia,
+      imageModel: session.imageModel,
+      imagePrompt: session.imagePrompt,
+      referenceMedia: session.referenceMedia,
     };
 
-    // Create task records
     const [leftTask, rightTask] = await Promise.all([
-      prisma.imageTask.create({ data: { treeId: node.treeId, nodeId: leftId, nodeTitel: result.left.titel, status: "pending" } }),
-      prisma.imageTask.create({ data: { treeId: node.treeId, nodeId: rightId, nodeTitel: result.right.titel, status: "pending" } }),
+      prisma.imageTask.create({ data: { sessionId: node.sessionId, nodeId: leftId, nodeTitel: result.left.titel, status: "pending" } }),
+      prisma.imageTask.create({ data: { sessionId: node.sessionId, nodeId: rightId, nodeTitel: result.right.titel, status: "pending" } }),
     ]);
 
-    // Use after() to keep serverless function alive until image generation completes
     after(async () => {
       async function processTask(taskId: string, nodeIdArg: string, prompt: string) {
         await prisma.imageTask.update({ where: { id: taskId }, data: { status: "generating", startedAt: new Date() } });

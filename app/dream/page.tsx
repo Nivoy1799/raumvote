@@ -10,33 +10,31 @@ import { faShare } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/lib/useAuth";
 import { useResponsive } from "@/lib/useResponsive";
 
-const TREE_VERSION = "dynamic";
-
 export default function DreamPage() {
   const router = useRouter();
   const { voterId } = useAuth();
   const r = useResponsive();
 
-  const [treeId, setTreeId] = useState<string>("");
+  const [sessionId, setSessionId] = useState<string>("");
   const [placeholderUrl, setPlaceholderUrl] = useState("/media/placeholder.jpg");
   const [node, setNode] = useState<TreeNodeData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchActiveTreeMeta().then((m) => {
-      setTreeId(m.treeId);
+      setSessionId(m.sessionId);
       setPlaceholderUrl(m.placeholderUrl);
     });
   }, []);
 
   useEffect(() => {
-    if (!voterId || !treeId) return;
+    if (!voterId || !sessionId) return;
 
     (async () => {
       setLoading(true);
 
       const res = await fetch(
-        `/api/vote/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&voterId=${encodeURIComponent(voterId)}`,
+        `/api/vote/status?sessionId=${encodeURIComponent(sessionId)}&voterId=${encodeURIComponent(voterId)}`,
         { cache: "no-store" }
       );
 
@@ -53,7 +51,7 @@ export default function DreamPage() {
       setNode(n);
       setLoading(false);
     })();
-  }, [voterId, treeId]);
+  }, [voterId, sessionId]);
 
   const shareUrl = useMemo(() => {
     if (!node) return "";

@@ -17,30 +17,28 @@ export async function POST(req: Request) {
   }
 
   const formData = await req.formData();
-  const treeId = formData.get("treeId") as string;
+  const sessionId = formData.get("sessionId") as string;
   const file = formData.get("file") as File | null;
 
-  if (!treeId || !file) {
-    return NextResponse.json({ error: "Missing treeId or file" }, { status: 400 });
+  if (!sessionId || !file) {
+    return NextResponse.json({ error: "Missing sessionId or file" }, { status: 400 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const ext = file.name.split(".").pop() || "bin";
   const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-  const key = `reference-media/${treeId}/${safeName}`;
+  const key = `reference-media/${sessionId}/${safeName}`;
   const contentType = file.type || "application/octet-stream";
 
   const url = await uploadToR2(key, buffer, contentType);
 
-  // Append to referenceMedia array
-  const config = await prisma.treeConfig.findUnique({ where: { treeId } });
-  if (!config) {
-    return NextResponse.json({ error: "Tree config not found" }, { status: 404 });
+  const session = await prisma.votingSession.findUnique({ where: { id: sessionId } });
+  if (!session) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
-  await prisma.treeConfig.update({
-    where: { treeId },
-    data: { referenceMedia: [...config.referenceMedia, url] },
+  await prisma.votingSession.update({
+    where: { id: sessionId },
+    data: { referenceMedia: [...session.referenceMedia, url] },
   });
 
   return NextResponse.json({ url });
@@ -53,20 +51,20 @@ export async function DELETE(req: Request) {
   }
 
   const body = await req.json();
-  const { treeId, url } = body;
+  const { sessionId, url } = body;
 
-  if (!treeId || !url) {
-    return NextResponse.json({ error: "Missing treeId or url" }, { status: 400 });
+  if (!sessionId || !url) {
+    return NextResponse.json({ error: "Missing sessionId or url" }, { status: 400 });
   }
 
-  const config = await prisma.treeConfig.findUnique({ where: { treeId } });
-  if (!config) {
-    return NextResponse.json({ error: "Tree config not found" }, { status: 404 });
+  const session = await prisma.votingSession.findUnique({ where: { id: sessionId } });
+  if (!session) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
-  await prisma.treeConfig.update({
-    where: { treeId },
-    data: { referenceMedia: config.referenceMedia.filter((u) => u !== url) },
+  await prisma.votingSession.update({
+    where: { id: sessionId },
+    data: { referenceMedia: session.referenceMedia.filter((u) => u !== url) },
   });
 
   return NextResponse.json({ ok: true });

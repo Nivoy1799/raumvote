@@ -1,10 +1,8 @@
 export type Choice = "left" | "right";
 
-// --- New DB-backed tree types ---
-
 export type TreeNodeData = {
   id: string;
-  treeId: string;
+  sessionId: string;
   titel: string;
   beschreibung: string;
   context: string;
@@ -31,44 +29,11 @@ export type GenerateResult = {
   left: TreeNodeData;
   right: TreeNodeData;
   isDiscoverer: boolean;
+  totalNodes: number;
 };
 
 export type ActiveTreeMeta = {
-  treeId: string;
+  sessionId: string;
   rootNodeId: string;
   placeholderUrl: string;
-};
-
-// --- Legacy types (kept for backward compat during migration) ---
-
-export type NodeSide = {
-  title: string;
-  description?: string;
-  mediaUrl: string;
-  next?: string;
-  end?: boolean;
-};
-
-export type Node = {
-  id: string;
-  question: string;
-  leftOptionId: string;
-  rightOptionId: string;
-};
-
-export type Option = {
-  id: string;
-  title: string;
-  description?: string;
-  mediaUrl: string;
-  nextNodeId?: string;
-  isEnd?: boolean;
-};
-
-export type TreeSnapshot = {
-  treeId: string;
-  version: string;
-  startNodeId: string;
-  nodes: Record<string, Node>;
-  options: Record<string, Option>;
 };

@@ -18,13 +18,15 @@ No test framework is configured.
 
 **RaumVote** is a mobile-first voting app where users swipe through binary-choice decision trees. Built with Next.js 16 App Router, React 19, Prisma 7 (PostgreSQL on Neon), and FontAwesome icons.
 
-### Core concept: Decision trees
+### Core concept: Sessions & Decision trees
 
-The voting content is a static JSON tree (`public/tree.active.json`) with nodes (binary questions) and options (choices with images). Users navigate by picking left/right, eventually reaching a leaf option they can vote for.
+Each **VotingSession** owns a complete decision tree. One session = one tree. Sessions have statuses: `draft` → `active` → `archived`. Only one draft or active session at a time. Archived sessions are read-only (no voting, discovery, or image generation).
 
-- `lib/tree.types.ts` — `TreeSnapshot`, `Node`, `Option` types
+Tree nodes are AI-generated binary choices. Users navigate by picking left/right, eventually reaching a leaf option they can vote for. All data (nodes, votes, likes, comments, image tasks) is linked to a session via `sessionId` FK with cascade deletes.
+
+- `lib/tree.types.ts` — `TreeNodeData`, `ActiveTreeMeta` types
 - `lib/tree.client.ts` — Client-side tree fetcher (caches in memory)
-- `lib/tree.ts` — Legacy hardcoded tree (kept for reference)
+- `lib/useSession.ts` — `SessionInfo` hook for active session state
 
 ### Voter identity (privacy-first)
 
@@ -50,18 +52,23 @@ All API routes follow the same pattern: validate params → hash voterId → Pri
 
 | Endpoint | Methods | Notes |
 |---|---|---|
-| `/api/vote` | POST | Upsert vote; re-voting same option unvotes |
-| `/api/vote/status` | GET | Check user's current vote |
-| `/api/like` | POST | Toggle like on option |
-| `/api/like/status` | GET | Check if user liked option |
-| `/api/like/count` | GET | Like count for option |
-| `/api/comment` | GET, POST | List/create comments (with usernames + avatars from User table) |
-| `/api/comment/count` | GET | Comment count for option |
+| `/api/vote` | POST | Upsert vote; re-voting same option unvotes. Params: `{sessionId, optionId, voterId}` |
+| `/api/vote/status` | GET | Check user's current vote. Params: `?sessionId=&voterId=` |
+| `/api/like` | POST | Toggle like on option. Params: `{sessionId, optionId, voterId}` |
+| `/api/like/status` | GET | Check if user liked option. Params: `?sessionId=&optionId=&voterId=` |
+| `/api/like/count` | GET | Like count for option. Params: `?sessionId=&optionId=` |
+| `/api/comment` | GET, POST | List/create comments. Params: `sessionId, optionId, voterId` |
+| `/api/comment/count` | GET | Comment count for option. Params: `?sessionId=&optionId=` |
 | `/api/comment/like` | POST | Toggle like on comment |
 | `/api/me` | GET, POST | User profile (username, avatarUrl) |
-| `/api/results` | GET | Aggregated vote counts |
+| `/api/results` | GET | Aggregated vote counts. Params: `?sessionId=` |
+| `/api/session` | GET | Active session info (rootNodeId, placeholderUrl, discoveryEnabled) |
 | `/api/auth/validate` | GET | Check if a token is valid and active |
+| `/api/admin/session` | GET, POST, PATCH, DELETE | Session CRUD + tree config (protected by ADMIN_SECRET) |
+| `/api/admin/session/media` | POST, DELETE | Reference media upload/remove for session |
 | `/api/admin/tokens` | GET, POST, PATCH, DELETE | Token CRUD (protected by ADMIN_SECRET header) |
+| `/api/admin/image-tasks` | GET, POST | Image generation task queue. Params: `sessionId` |
+| `/api/admin/tree-reset` | POST | Reset tree for a session (delete all nodes, create new root) |
 
 ### Shared components
 

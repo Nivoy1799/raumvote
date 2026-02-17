@@ -11,12 +11,10 @@ import { useTTS } from "@/lib/useTTS";
 import { faHeart, faComment, faShare, faCheckToSlot } from "@fortawesome/free-solid-svg-icons";
 import { ActionRail } from "@/components/ActionRail";
 import { CommentBottomSheet } from "@/components/CommentBottomSheet";
-import { DiscoveryRevealCard } from "@/components/DiscoveryRevealCard";
+import { DiscoveryRevealCard, type DiscoveryVariant } from "@/components/DiscoveryRevealCard";
 import { useAuth } from "@/lib/useAuth";
 import { useSession } from "@/lib/useSession";
 import { useResponsive } from "@/lib/useResponsive";
-
-const TREE_VERSION = "dynamic";
 
 const GENERATING_MESSAGES = [
   "Generiere neue Realitäten",
@@ -123,7 +121,7 @@ export default function NodePage() {
 
   const nodeId = params.nodeId;
 
-  const [treeId, setTreeId] = useState("");
+  const [sessionId, setSessionId] = useState("");
   const [placeholderUrl, setPlaceholderUrl] = useState("/media/placeholder.jpg");
   const [node, setNode] = useState<TreeNodeData | null>(null);
   const [left, setLeft] = useState<TreeNodeData | null>(null);
@@ -134,6 +132,7 @@ export default function NodePage() {
   const [showReveal, setShowReveal] = useState(false);
   const [revealNode, setRevealNode] = useState<TreeNodeData | null>(null);
   const [isDiscoverer, setIsDiscoverer] = useState(false);
+  const [totalNodes, setTotalNodes] = useState<number | undefined>(undefined);
   const [imagesLoading, setImagesLoading] = useState(false);
   const [skipImages, setSkipImages] = useState(false);
 
@@ -181,7 +180,7 @@ export default function NodePage() {
   // Fetch tree meta
   useEffect(() => {
     fetchActiveTreeMeta().then((meta) => {
-      setTreeId(meta.treeId);
+      setSessionId(meta.sessionId);
       setPlaceholderUrl(meta.placeholderUrl);
     });
   }, []);
@@ -210,6 +209,9 @@ export default function NodePage() {
           setLeft(gen.left);
           setRight(gen.right);
           setGenerating(false);
+          if (gen.totalNodes !== undefined) {
+            setTotalNodes(gen.totalNodes);
+          }
           if (gen.isDiscoverer) {
             setIsDiscoverer(true);
             setRevealNode(gen.node);
@@ -257,16 +259,16 @@ export default function NodePage() {
 
   // Fetch interaction states (likes, votes, comments)
   useEffect(() => {
-    if (!treeId || !voterId || !left || !right) return;
+    if (!sessionId || !voterId || !left || !right) return;
     (async () => {
       const [l1, l2, v, c1, c2, cc1, cc2] = await Promise.all([
-        fetch(`/api/like/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&optionId=${encodeURIComponent(left.id)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
-        fetch(`/api/like/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&optionId=${encodeURIComponent(right.id)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
-        fetch(`/api/vote/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
-        fetch(`/api/like/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&optionId=${encodeURIComponent(left.id)}`).then(r => r.json()),
-        fetch(`/api/like/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&optionId=${encodeURIComponent(right.id)}`).then(r => r.json()),
-        fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&optionId=${encodeURIComponent(left.id)}`).then(r => r.json()),
-        fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&optionId=${encodeURIComponent(right.id)}`).then(r => r.json()),
+        fetch(`/api/like/status?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(left.id)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
+        fetch(`/api/like/status?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(right.id)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
+        fetch(`/api/vote/status?sessionId=${encodeURIComponent(sessionId)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
+        fetch(`/api/like/count?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(left.id)}`).then(r => r.json()),
+        fetch(`/api/like/count?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(right.id)}`).then(r => r.json()),
+        fetch(`/api/comment/count?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(left.id)}`).then(r => r.json()),
+        fetch(`/api/comment/count?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(right.id)}`).then(r => r.json()),
       ]);
       setLikedLeft(!!l1.liked);
       setLikedRight(!!l2.liked);
@@ -276,7 +278,7 @@ export default function NodePage() {
       setCommentCountLeft(cc1.count ?? 0);
       setCommentCountRight(cc2.count ?? 0);
     })();
-  }, [treeId, voterId, left, right]);
+  }, [sessionId, voterId, left, right]);
 
   async function vote(optionId: string) {
     if (!voterId) return;
@@ -286,7 +288,7 @@ export default function NodePage() {
     const res = await fetch("/api/vote", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ treeId, treeVersion: TREE_VERSION, voterId, optionId }),
+      body: JSON.stringify({ sessionId, voterId, optionId }),
     });
     const data = await res.json().catch(() => null);
     if (data?.ok) {
@@ -307,7 +309,7 @@ export default function NodePage() {
     const res = await fetch("/api/like", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ treeId, treeVersion: TREE_VERSION, voterId, optionId }),
+      body: JSON.stringify({ sessionId, voterId, optionId }),
     });
     const data = await res.json().catch(() => null);
     if (data?.liked === undefined) return;
@@ -335,10 +337,10 @@ export default function NodePage() {
 
   function closeComments() {
     setCommentModalOpen(false);
-    if (!treeId || !left || !right) return;
+    if (!sessionId || !left || !right) return;
     Promise.all([
-      fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&optionId=${encodeURIComponent(left.id)}`).then(r => r.json()),
-      fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&optionId=${encodeURIComponent(right.id)}`).then(r => r.json()),
+      fetch(`/api/comment/count?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(left.id)}`).then(r => r.json()),
+      fetch(`/api/comment/count?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(right.id)}`).then(r => r.json()),
     ]).then(([cc1, cc2]) => {
       setCommentCountLeft(cc1.count ?? 0);
       setCommentCountRight(cc2.count ?? 0);
@@ -365,6 +367,14 @@ export default function NodePage() {
     discoverNode(revealNode.id, voterId);
     setShowReveal(false);
   }
+
+  // Determine discovery reveal variant
+  const revealVariant: DiscoveryVariant = (() => {
+    if (!revealNode) return "new";
+    if (revealNode.depth >= 5 && isDiscoverer) return "rare";
+    if (isDiscoverer) return "new";
+    return "visited";
+  })();
 
   const isPortrait = r.breakpoint === "small";
 
@@ -973,10 +983,9 @@ export default function NodePage() {
 
         {showReveal && revealNode && (
           <DiscoveryRevealCard
-            titel={revealNode.titel}
-            beschreibung={revealNode.beschreibung}
-            context={revealNode.context}
-            isFirstExplorer={isDiscoverer}
+            node={revealNode}
+            variant={revealVariant}
+            totalPaths={totalNodes}
             onExplore={handleExplore}
             onLater={() => setShowReveal(false)}
           />
@@ -986,8 +995,7 @@ export default function NodePage() {
           <CommentBottomSheet
             isOpen={commentModalOpen}
             onClose={closeComments}
-            treeId={treeId}
-            treeVersion={TREE_VERSION}
+            sessionId={sessionId}
             optionId={commentModalOptionId}
             voterId={voterId}
             readOnly={!isOpen}
@@ -1179,10 +1187,9 @@ export default function NodePage() {
       {/* Discovery Reveal Card */}
       {showReveal && revealNode && (
         <DiscoveryRevealCard
-          titel={revealNode.titel}
-          beschreibung={revealNode.beschreibung}
-          context={revealNode.context}
-          isFirstExplorer={isDiscoverer}
+          node={revealNode}
+          variant={revealVariant}
+          totalPaths={totalNodes}
           onExplore={handleExplore}
           onLater={() => setShowReveal(false)}
         />
@@ -1192,8 +1199,7 @@ export default function NodePage() {
         <CommentBottomSheet
           isOpen={commentModalOpen}
           onClose={closeComments}
-          treeId={treeId}
-          treeVersion={TREE_VERSION}
+          sessionId={sessionId}
           optionId={commentModalOptionId}
           voterId={voterId}
           readOnly={!isOpen}

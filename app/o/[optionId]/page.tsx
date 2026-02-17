@@ -13,8 +13,6 @@ import { useAuth } from "@/lib/useAuth";
 import { useSession } from "@/lib/useSession";
 import { useResponsive } from "@/lib/useResponsive";
 
-const TREE_VERSION = "dynamic";
-
 export default function OptionPage() {
   const params = useParams<{ optionId: string }>();
   const router = useRouter();
@@ -24,7 +22,7 @@ export default function OptionPage() {
   const r = useResponsive();
   const { speak } = useTTS();
 
-  const [treeId, setTreeId] = useState("");
+  const [sessionId, setSessionId] = useState("");
   const [placeholderUrl, setPlaceholderUrl] = useState("/media/placeholder.jpg");
   const [node, setNode] = useState<TreeNodeData | null>(null);
 
@@ -36,7 +34,7 @@ export default function OptionPage() {
 
   useEffect(() => {
     fetchActiveTreeMeta().then((m) => {
-      setTreeId(m.treeId);
+      setSessionId(m.sessionId);
       setPlaceholderUrl(m.placeholderUrl);
     });
   }, []);
@@ -55,27 +53,27 @@ export default function OptionPage() {
   }, [optionId, node?.id, speak]);
 
   useEffect(() => {
-    if (!treeId || !voterId || !optionId) return;
+    if (!sessionId || !voterId || !optionId) return;
     (async () => {
       const [ls, lc, vs, cc] = await Promise.all([
-        fetch(`/api/like/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&optionId=${encodeURIComponent(optionId)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
-        fetch(`/api/like/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&optionId=${encodeURIComponent(optionId)}`).then(r => r.json()),
-        fetch(`/api/vote/status?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
-        fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&optionId=${encodeURIComponent(optionId)}`).then(r => r.json()),
+        fetch(`/api/like/status?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(optionId)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
+        fetch(`/api/like/count?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(optionId)}`).then(r => r.json()),
+        fetch(`/api/vote/status?sessionId=${encodeURIComponent(sessionId)}&voterId=${encodeURIComponent(voterId)}`).then(r => r.json()),
+        fetch(`/api/comment/count?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(optionId)}`).then(r => r.json()),
       ]);
       setLiked(!!ls.liked);
       setLikeCount(lc.count ?? 0);
       setVoted(vs.optionId === optionId);
       setCommentCount(cc.count ?? 0);
     })();
-  }, [treeId, voterId, optionId]);
+  }, [sessionId, voterId, optionId]);
 
   async function toggleLike() {
     if (!voterId) return;
     const res = await fetch("/api/like", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ treeId, treeVersion: TREE_VERSION, voterId, optionId }),
+      body: JSON.stringify({ sessionId, voterId, optionId }),
     });
     const data = await res.json().catch(() => null);
     if (data?.liked === undefined) return;
@@ -88,7 +86,7 @@ export default function OptionPage() {
     const res = await fetch("/api/vote", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ treeId, treeVersion: TREE_VERSION, voterId, optionId }),
+      body: JSON.stringify({ sessionId, voterId, optionId }),
     });
     const data = await res.json().catch(() => null);
     if (data?.ok) setVoted(data.optionId === optionId);
@@ -154,12 +152,11 @@ export default function OptionPage() {
           readOnly={!isOpen}
           onClose={() => {
             setCommentModalOpen(false);
-            if (treeId) {
-              fetch(`/api/comment/count?treeId=${encodeURIComponent(treeId)}&treeVersion=${TREE_VERSION}&optionId=${encodeURIComponent(optionId)}`).then(r => r.json()).then(d => setCommentCount(d.count ?? 0));
+            if (sessionId) {
+              fetch(`/api/comment/count?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(optionId)}`).then(r => r.json()).then(d => setCommentCount(d.count ?? 0));
             }
           }}
-          treeId={treeId}
-          treeVersion={TREE_VERSION}
+          sessionId={sessionId}
           optionId={optionId}
           voterId={voterId}
         />
