@@ -29,7 +29,7 @@ export default function MePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [likedNodes, setLikedNodes] = useState<LikedNode[]>([]);
   const [likesLoading, setLikesLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState<"profile" | "account" | "likes" | "settings" | "delete">("profile");
+  const [currentPage, setCurrentPage] = useState<"profile" | "account" | "likes" | "discoveries" | "settings" | "delete">("profile");
 
   // Settings state
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
@@ -38,6 +38,10 @@ export default function MePage() {
   const [ttsVoice, setTtsVoice] = useState("");
   const [ttsRate, setTtsRate] = useState(1);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  // Discoveries state
+  const [discoveries, setDiscoveries] = useState<any[]>([]);
+  const [discoveriesLoading, setDiscoveriesLoading] = useState(false);
 
   // Load user profile and liked nodes
   useEffect(() => {
@@ -239,6 +243,37 @@ export default function MePage() {
                   <FontAwesomeIcon icon={faHeart} /> Deine Likes
                 </button>
                 <button
+                  onClick={() => {
+                    setCurrentPage("discoveries");
+                    if (voterId && discoveries.length === 0) {
+                      setDiscoveriesLoading(true);
+                      fetch(`/api/me/discoveries?voterId=${encodeURIComponent(voterId)}`, { cache: "no-store" })
+                        .then((res) => res.json())
+                        .then((data) => {
+                          setDiscoveries(data.discoveries ?? []);
+                          setDiscoveriesLoading(false);
+                        })
+                        .catch(() => setDiscoveriesLoading(false));
+                    }
+                  }}
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: "white",
+                    padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`,
+                    borderRadius: r.borderRadius.small,
+                    cursor: "pointer",
+                    fontSize: r.fontSize.body,
+                    fontWeight: 750,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  🔍 Entdeckungen
+                </button>
+                <button
                   onClick={() => setCurrentPage("settings")}
                   style={{
                     background: "rgba(255,255,255,0.08)",
@@ -364,6 +399,65 @@ export default function MePage() {
                         <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{n.beschreibung}</div>
                         <div style={{ fontSize: r.fontSize.small - 1, opacity: 0.4, marginTop: 2 }}>
                           Tiefe {n.depth} &middot; {new Date(like.createdAt).toLocaleDateString("de")}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Discoveries Page */}
+        {currentPage === "discoveries" && (
+          <div>
+            <div style={{ fontSize: r.fontSize.title + 2, fontWeight: 950, letterSpacing: -0.3, marginBottom: r.spacing.small }}>Deine Entdeckungen</div>
+            <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginBottom: r.spacing.medium }}>Nodes, die du als Erste entdeckt hast 🔍</div>
+            {discoveriesLoading ? (
+              <div style={{ opacity: 0.5, fontSize: r.fontSize.body }}>Laden...</div>
+            ) : discoveries.length === 0 ? (
+              <div style={{ opacity: 0.5, fontSize: r.fontSize.body }}>Noch keine Entdeckungen</div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {discoveries.map((disc) => {
+                  return (
+                    <button
+                      key={disc.id}
+                      onClick={() => router.push(`/n/${disc.parent?.id || disc.id}`)}
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        alignItems: "center",
+                        padding: 10,
+                        border: "1px solid rgba(96,165,250,0.20)",
+                        background: "rgba(96,165,250,0.06)",
+                        borderRadius: r.borderRadius.small,
+                        cursor: "pointer",
+                        color: "white",
+                        textAlign: "left" as const,
+                        width: "100%",
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(96,165,250,0.12)";
+                        e.currentTarget.style.borderColor = "rgba(96,165,250,0.40)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(96,165,250,0.06)";
+                        e.currentTarget.style.borderColor = "rgba(96,165,250,0.20)";
+                      }}
+                    >
+                      <div style={{ width: 56, height: 56, borderRadius: r.borderRadius.small - 4, overflow: "hidden", flexShrink: 0, position: "relative" as const, background: "rgba(255,255,255,0.06)" }}>
+                        {disc.mediaUrl && (
+                          <NextImage src={disc.mediaUrl} alt={disc.titel} fill style={{ objectFit: "cover" }} sizes="56px" />
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: r.fontSize.body, fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{disc.titel}</div>
+                        <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{disc.beschreibung}</div>
+                        <div style={{ fontSize: r.fontSize.small - 1, opacity: 0.4, marginTop: 2 }}>
+                          Tiefe {disc.depth} &middot; ⭐ Entdeckt {new Date(disc.createdAt).toLocaleDateString("de")}
                         </div>
                       </div>
                     </button>
