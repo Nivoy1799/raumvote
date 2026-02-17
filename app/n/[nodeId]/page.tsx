@@ -396,6 +396,74 @@ export default function NodePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPortrait, left?.id, right?.id, activeCard]);
 
+  // Keyboard navigation support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle keys when comment modal is open or data is not loaded
+      if (commentModalOpen || !left || !right) return;
+
+      const isPortraitMode = r.breakpoint === "small";
+      const key = e.key.toLowerCase();
+
+      // Landscape mode: simple left/right navigation
+      if (!isPortraitMode) {
+        if (key === "arrowleft") {
+          e.preventDefault();
+          navigate(left);
+        } else if (key === "arrowright") {
+          e.preventDefault();
+          navigate(right);
+        }
+        return;
+      }
+
+      // Portrait mode: based on activeCard state
+      if (activeCard === null) {
+        // Center view: arrow keys to focus cards
+        if (key === "arrowright") {
+          e.preventDefault();
+          setActiveCard(0);
+        } else if (key === "arrowleft") {
+          e.preventDefault();
+          setActiveCard(1);
+        }
+      } else {
+        // Card focused: navigation and action keys
+        const focusedCard = activeCard === 0 ? left : right;
+        const focusedOptionId = focusedCard.id;
+
+        if (key === "arrowup" || key === "enter") {
+          e.preventDefault();
+          navigate(focusedCard);
+        } else if (key === "arrowdown" || key === "escape") {
+          e.preventDefault();
+          setActiveCard(null);
+        } else if (key === "l") {
+          e.preventDefault();
+          toggleLike(focusedOptionId);
+        } else if (key === "v") {
+          e.preventDefault();
+          vote(focusedOptionId);
+        } else if (key === "c") {
+          e.preventDefault();
+          openComments(focusedOptionId);
+        } else if (key === "s") {
+          e.preventDefault();
+          shareOption(focusedOptionId);
+        } else if (key === "arrowleft" && activeCard === 0) {
+          e.preventDefault();
+          setActiveCard(1);
+        } else if (key === "arrowright" && activeCard === 1) {
+          e.preventDefault();
+          setActiveCard(0);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [left, right, activeCard, commentModalOpen, r.breakpoint, navigate, toggleLike, vote, openComments, shareOption]);
+
   // Landscape/large swipe — navigates into child
   const swipe = useSwipeChoice({
     onChoice: (c) => {

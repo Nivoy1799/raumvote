@@ -21,10 +21,10 @@ export function useTTS() {
     // Load voices
     const loadVoices = () => {
       const allVoices = synth.getVoices();
-      // Prefer German voices first, then all others
+      // Filter to only German and English voices, German first
       const germanVoices = allVoices.filter((v) => v.lang.startsWith("de"));
-      const otherVoices = allVoices.filter((v) => !v.lang.startsWith("de"));
-      setVoices([...germanVoices, ...otherVoices]);
+      const englishVoices = allVoices.filter((v) => v.lang.startsWith("en"));
+      setVoices([...germanVoices, ...englishVoices]);
     };
 
     loadVoices();
