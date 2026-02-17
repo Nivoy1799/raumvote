@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import NextImage from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faCamera, faHeart, faGear, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faCamera, faHeart, faGear, faSignOutAlt, faVolumeHigh } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/lib/useAuth";
 import { useResponsive } from "@/lib/useResponsive";
+import { useTTS } from "@/lib/useTTS";
 
 type LikedNode = {
   id: string;
@@ -19,6 +20,8 @@ export default function MePage() {
   const { voterId } = useAuth();
   const router = useRouter();
   const r = useResponsive();
+  const { speak, stop, isSpeaking, voices, supported: ttsSupported } = useTTS();
+
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -26,8 +29,17 @@ export default function MePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [likedNodes, setLikedNodes] = useState<LikedNode[]>([]);
   const [likesLoading, setLikesLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState<"profile" | "likes" | "settings" | "delete">("profile");
+  const [currentPage, setCurrentPage] = useState<"profile" | "account" | "likes" | "settings" | "delete">("profile");
 
+  // Settings state
+  const [vibrationEnabled, setVibrationEnabled] = useState(true);
+  const [colorblindMode, setColorblindMode] = useState("none");
+  const [ttsEnabled, setTtsEnabled] = useState(false);
+  const [ttsVoice, setTtsVoice] = useState("");
+  const [ttsRate, setTtsRate] = useState(1);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  // Load user profile and liked nodes
   useEffect(() => {
     if (!voterId) return;
     (async () => {
@@ -47,6 +59,26 @@ export default function MePage() {
       setLikesLoading(false);
     })();
   }, [voterId]);
+
+  // Load settings from localStorage
+  useEffect(() => {
+    const vibOff = localStorage.getItem("rv-vibration-disabled");
+    setVibrationEnabled(vibOff !== "0");
+
+    const cbMode = localStorage.getItem("rv-colorblind-mode");
+    setColorblindMode(cbMode || "none");
+
+    const ttsOn = localStorage.getItem("rv-tts-enabled");
+    setTtsEnabled(ttsOn === "1");
+
+    const voice = localStorage.getItem("rv-tts-voice");
+    setTtsVoice(voice || "");
+
+    const rate = localStorage.getItem("rv-tts-rate");
+    setTtsRate(rate ? parseFloat(rate) : 1);
+
+    setSettingsLoaded(true);
+  }, []);
 
   const maskedId = useMemo(() => {
     if (!voterId) return "";
@@ -122,114 +154,171 @@ export default function MePage() {
         {currentPage === "profile" && (
           <>
             <div style={{ fontSize: r.fontSize.title + 3, fontWeight: 950, letterSpacing: -0.3 }}>Profil</div>
-            <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginTop: 6, lineHeight: 1.35 }}>Gespeichert wird nur ein Hash deiner lokalen ID (keine UUID in der DB).</div>
+            <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginTop: 6, lineHeight: 1.35 }}>Verwalte dein Konto und deine Einstellungen.</div>
 
             <section style={{ marginTop: r.spacing.medium, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)", borderRadius: r.borderRadius.medium, padding: r.spacing.medium, backdropFilter: "blur(14px)" }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: r.spacing.medium }}>
-            <button style={{ position: "relative" as const, width: avatarSize, height: avatarSize, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "2px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "visible", cursor: "pointer", padding: 0, color: "white" }} onClick={() => fileRef.current?.click()}>
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" style={{ width: avatarSize, height: avatarSize, borderRadius: "50%", objectFit: "cover" as const }} />
-              ) : (
-                <FontAwesomeIcon icon={faUser} style={{ fontSize: isLrg ? 48 : 32, color: "rgba(255,255,255,0.4)" }} />
-              )}
-              <div style={{ position: "absolute" as const, bottom: -2, right: -2, width: isLrg ? 34 : 26, height: isLrg ? 34 : 26, borderRadius: "50%", background: "rgba(96,165,250,0.9)", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid black" }}>
-                <FontAwesomeIcon icon={faCamera} style={{ fontSize: isLrg ? 14 : 11 }} />
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: r.spacing.medium }}>
+                <button
+                  onClick={() => setCurrentPage("account")}
+                  style={{
+                    position: "relative" as const,
+                    width: avatarSize,
+                    height: avatarSize,
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.08)",
+                    border: "2px solid rgba(255,255,255,0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "visible",
+                    cursor: "pointer",
+                    padding: 0,
+                    color: "white",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Avatar" style={{ width: avatarSize, height: avatarSize, borderRadius: "50%", objectFit: "cover" as const }} />
+                  ) : (
+                    <FontAwesomeIcon icon={faUser} style={{ fontSize: isLrg ? 48 : 32, color: "rgba(255,255,255,0.4)" }} />
+                  )}
+                </button>
               </div>
-            </button>
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
-          </div>
 
-          <div style={{ fontSize: r.fontSize.small, opacity: 0.75, fontWeight: 850 }}>Deine lokale ID</div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 8 }}>
-            <code style={{ display: "inline-flex", padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(0,0,0,0.35)", color: "rgba(255,255,255,0.9)", fontSize: r.fontSize.small, overflow: "hidden" }}>{maskedId || "—"}</code>
-            <button
-              style={{ width: isLrg ? 48 : 40, height: isLrg ? 48 : 40, borderRadius: r.borderRadius.small, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.06)", color: "white", cursor: "pointer", fontWeight: 900, fontSize: r.fontSize.body }}
-              onClick={async () => voterId && navigator.clipboard.writeText(voterId)}
-              aria-label="Copy voterId"
-              title="Copy"
-            >
-              ⧉
-            </button>
-          </div>
+              <div style={{ fontSize: r.fontSize.body, fontWeight: 850, marginBottom: r.spacing.small }}>Deine lokale ID</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: r.spacing.large }}>
+                <code style={{ display: "inline-flex", padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(0,0,0,0.35)", color: "rgba(255,255,255,0.9)", fontSize: r.fontSize.small, overflow: "hidden" }}>{maskedId || "—"}</code>
+                <button
+                  style={{ width: isLrg ? 48 : 40, height: isLrg ? 48 : 40, borderRadius: r.borderRadius.small, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.06)", color: "white", cursor: "pointer", fontWeight: 900, fontSize: r.fontSize.body }}
+                  onClick={async () => voterId && navigator.clipboard.writeText(voterId)}
+                  aria-label="Copy voterId"
+                  title="Copy"
+                >
+                  ⧉
+                </button>
+              </div>
 
-          <div style={{ height: r.spacing.medium }} />
+              {/* Navigation buttons */}
+              <div style={{ display: "grid", gap: 8 }}>
+                <button
+                  onClick={() => setCurrentPage("account")}
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: "white",
+                    padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`,
+                    borderRadius: r.borderRadius.small,
+                    cursor: "pointer",
+                    fontSize: r.fontSize.body,
+                    fontWeight: 750,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <FontAwesomeIcon icon={faUser} /> Konto
+                </button>
+                <button
+                  onClick={() => setCurrentPage("likes")}
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: "white",
+                    padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`,
+                    borderRadius: r.borderRadius.small,
+                    cursor: "pointer",
+                    fontSize: r.fontSize.body,
+                    fontWeight: 750,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <FontAwesomeIcon icon={faHeart} /> Deine Likes
+                </button>
+                <button
+                  onClick={() => setCurrentPage("settings")}
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: "white",
+                    padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`,
+                    borderRadius: r.borderRadius.small,
+                    cursor: "pointer",
+                    fontSize: r.fontSize.body,
+                    fontWeight: 750,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <FontAwesomeIcon icon={faGear} /> Einstellungen
+                </button>
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    background: "rgba(255,165,0,0.1)",
+                    border: "1px solid rgba(255,165,0,0.25)",
+                    color: "rgba(255,165,0,0.9)",
+                    padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`,
+                    borderRadius: r.borderRadius.small,
+                    cursor: "pointer",
+                    fontSize: r.fontSize.body,
+                    fontWeight: 750,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <FontAwesomeIcon icon={faSignOutAlt} /> Abmelden
+                </button>
+              </div>
+            </section>
+          </>
+        )}
 
-          <label style={{ fontSize: r.fontSize.small, opacity: 0.75, fontWeight: 850 }}>Username</label>
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="z.B. Liam_14"
-            maxLength={24}
-            style={{ marginTop: 8, width: "100%", padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.35)", color: "white", outline: "none", fontSize: r.fontSize.body, fontWeight: 750 }}
-            disabled={loading}
-          />
+        {/* Account Page */}
+        {currentPage === "account" && (
+          <>
+            <section style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)", borderRadius: r.borderRadius.medium, padding: r.spacing.medium, backdropFilter: "blur(14px)" }}>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: r.spacing.medium }}>
+                <button style={{ position: "relative" as const, width: avatarSize, height: avatarSize, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "2px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "visible", cursor: "pointer", padding: 0, color: "white" }} onClick={() => fileRef.current?.click()}>
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Avatar" style={{ width: avatarSize, height: avatarSize, borderRadius: "50%", objectFit: "cover" as const }} />
+                  ) : (
+                    <FontAwesomeIcon icon={faUser} style={{ fontSize: isLrg ? 48 : 32, color: "rgba(255,255,255,0.4)" }} />
+                  )}
+                  <div style={{ position: "absolute" as const, bottom: -2, right: -2, width: isLrg ? 34 : 26, height: isLrg ? 34 : 26, borderRadius: "50%", background: "rgba(96,165,250,0.9)", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid black" }}>
+                    <FontAwesomeIcon icon={faCamera} style={{ fontSize: isLrg ? 14 : 11 }} />
+                  </div>
+                </button>
+                <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
+              </div>
 
-          <div style={{ marginTop: r.spacing.medium, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const }}>
-            <button style={{ border: "1px solid rgba(255,255,255,0.16)", background: "rgba(255,255,255,0.10)", color: "white", padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, cursor: "pointer", fontWeight: 900, fontSize: r.fontSize.body }} onClick={save} disabled={!voterId || loading}>
-              Speichern
-            </button>
-            {saved && <div style={{ fontSize: r.fontSize.small, opacity: 0.85 }}>Saved ✓</div>}
-          </div>
-            {/* Navigation buttons */}
-            <div style={{ marginTop: r.spacing.large, display: "grid", gap: 8 }}>
-              <button
-                onClick={() => setCurrentPage("likes")}
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "white",
-                  padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`,
-                  borderRadius: r.borderRadius.small,
-                  cursor: "pointer",
-                  fontSize: r.fontSize.body,
-                  fontWeight: 750,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <FontAwesomeIcon icon={faHeart} /> Deine Likes
-              </button>
-              <button
-                onClick={() => setCurrentPage("settings")}
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "white",
-                  padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`,
-                  borderRadius: r.borderRadius.small,
-                  cursor: "pointer",
-                  fontSize: r.fontSize.body,
-                  fontWeight: 750,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <FontAwesomeIcon icon={faGear} /> Einstellungen
-              </button>
-              <button
-                onClick={handleLogout}
-                style={{
-                  background: "rgba(255,165,0,0.1)",
-                  border: "1px solid rgba(255,165,0,0.25)",
-                  color: "rgba(255,165,0,0.9)",
-                  padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`,
-                  borderRadius: r.borderRadius.small,
-                  cursor: "pointer",
-                  fontSize: r.fontSize.body,
-                  fontWeight: 750,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <FontAwesomeIcon icon={faSignOutAlt} /> Abmelden
-              </button>
-            </div>
+              <label style={{ fontSize: r.fontSize.small, opacity: 0.75, fontWeight: 850 }}>Benutzername</label>
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                onBlur={save}
+                placeholder="z.B. Liam_14"
+                maxLength={24}
+                style={{ marginTop: 8, width: "100%", padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.35)", color: "white", outline: "none", fontSize: r.fontSize.body, fontWeight: 750 }}
+                disabled={loading}
+              />
+
+              <div style={{ marginTop: r.spacing.medium, display: "flex", alignItems: "center", gap: 10, minHeight: 20 }}>
+                {saved && <div style={{ fontSize: r.fontSize.small, opacity: 0.85, animation: "fadeOut 1.5s ease-in-out forwards", animationDelay: "0.3s" }}>Gespeichert ✓</div>}
+              </div>
+              <style>{`
+                @keyframes fadeOut {
+                  0%, 60% { opacity: 0.85; }
+                  100% { opacity: 0; }
+                }
+              `}</style>
             </section>
           </>
         )}
@@ -292,13 +381,26 @@ export default function MePage() {
             <section style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)", borderRadius: r.borderRadius.medium, padding: r.spacing.medium, backdropFilter: "blur(14px)" }}>
               <div style={{ fontSize: r.fontSize.body, fontWeight: 850, marginBottom: r.spacing.small }}>Vibrationen</div>
               <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: r.spacing.medium }}>
-                <input type="checkbox" defaultChecked onChange={(e) => localStorage.setItem("rv-vibration-disabled", e.target.checked ? "1" : "0")} style={{ width: 18, height: 18, cursor: "pointer" }} />
+                <input
+                  type="checkbox"
+                  checked={vibrationEnabled}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setVibrationEnabled(enabled);
+                    localStorage.setItem("rv-vibration-disabled", enabled ? "0" : "1");
+                  }}
+                  style={{ width: 18, height: 18, cursor: "pointer" }}
+                />
                 <span style={{ fontSize: r.fontSize.body, opacity: 0.8 }}>Vibrationen aktivieren</span>
               </label>
 
               <div style={{ fontSize: r.fontSize.body, fontWeight: 850, marginBottom: r.spacing.small, marginTop: r.spacing.medium }}>Farbblindheit</div>
               <select
-                onChange={(e) => localStorage.setItem("rv-colorblind-mode", e.target.value)}
+                value={colorblindMode}
+                onChange={(e) => {
+                  setColorblindMode(e.target.value);
+                  localStorage.setItem("rv-colorblind-mode", e.target.value);
+                }}
                 style={{
                   width: "100%",
                   padding: `${r.spacing.small + 2}px ${r.spacing.small}px`,
@@ -318,25 +420,124 @@ export default function MePage() {
                 <option value="tritanopia" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Tritanopia (Blaugelb-Blindheit)</option>
               </select>
 
-              <div style={{ fontSize: r.fontSize.body, fontWeight: 850, marginBottom: r.spacing.small }}>Sprachmodell</div>
-              <select
-                onChange={(e) => localStorage.setItem("rv-voice-model", e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: `${r.spacing.small + 2}px ${r.spacing.small}px`,
-                  borderRadius: r.borderRadius.small,
-                  border: "1px solid rgba(96,165,250,0.3)",
-                  background: "rgba(96,165,250,0.1)",
-                  color: "white",
-                  fontSize: r.fontSize.body,
-                  appearance: "none",
-                  cursor: "pointer",
-                }}
-              >
-                <option value="default" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Standard</option>
-                <option value="fast" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Schnell</option>
-                <option value="quality" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Qualität</option>
-              </select>
+              {/* TTS Settings */}
+              <div style={{ fontSize: r.fontSize.body, fontWeight: 850, marginBottom: r.spacing.small, marginTop: r.spacing.medium }}>Vorlesen (Text-zu-Sprache)</div>
+              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: r.spacing.medium }}>
+                <input
+                  id="tts-enable"
+                  type="checkbox"
+                  checked={ttsEnabled}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setTtsEnabled(enabled);
+                    localStorage.setItem("rv-tts-enabled", enabled ? "1" : "0");
+                  }}
+                  style={{ width: 18, height: 18, cursor: "pointer" }}
+                  aria-describedby="tts-desc"
+                />
+                <span style={{ fontSize: r.fontSize.body, opacity: 0.8 }}>Vorlesen aktivieren</span>
+              </label>
+              <div id="tts-desc" style={{ fontSize: r.fontSize.small, opacity: 0.6, marginBottom: r.spacing.medium }}>Inhalte werden automatisch vorgelesen</div>
+
+              {ttsEnabled && (
+                <>
+                  <label htmlFor="tts-voice" style={{ fontSize: r.fontSize.small, opacity: 0.75, fontWeight: 850, display: "block", marginBottom: 8 }}>
+                    Stimme
+                  </label>
+                  <select
+                    id="tts-voice"
+                    value={ttsVoice}
+                    onChange={(e) => {
+                      setTtsVoice(e.target.value);
+                      localStorage.setItem("rv-tts-voice", e.target.value);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: `${r.spacing.small + 2}px ${r.spacing.small}px`,
+                      borderRadius: r.borderRadius.small,
+                      border: "1px solid rgba(96,165,250,0.3)",
+                      background: "rgba(96,165,250,0.1)",
+                      color: "white",
+                      fontSize: r.fontSize.body,
+                      marginBottom: r.spacing.medium,
+                      appearance: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <option value="" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Standardstimme</option>
+                    {voices.length === 0 ? (
+                      <option style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Wird geladen...</option>
+                    ) : (
+                      voices.map((v) => (
+                        <option key={v.voiceURI} value={v.voiceURI} style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>
+                          {v.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+
+                  <label htmlFor="tts-rate" style={{ fontSize: r.fontSize.small, opacity: 0.75, fontWeight: 850, display: "block", marginBottom: 8 }}>
+                    Lesegeschwindigkeit: {ttsRate}×
+                  </label>
+                  <input
+                    id="tts-rate"
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.25"
+                    value={ttsRate}
+                    onChange={(e) => {
+                      const rate = parseFloat(e.target.value);
+                      setTtsRate(rate);
+                      localStorage.setItem("rv-tts-rate", rate.toString());
+                    }}
+                    aria-valuetext={`${ttsRate}x`}
+                    style={{
+                      width: "100%",
+                      marginBottom: r.spacing.medium,
+                      cursor: "pointer",
+                    }}
+                  />
+
+                  <button
+                    onClick={() => (isSpeaking ? stop() : speak("Willkommen bei RaumVote. Dein Raum wartet auf dich."))}
+                    style={{
+                      width: "100%",
+                      background: isSpeaking ? "rgba(239,68,68,0.3)" : "rgba(96,165,250,0.3)",
+                      border: isSpeaking ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(96,165,250,0.5)",
+                      color: isSpeaking ? "rgba(239,68,68,0.95)" : "rgba(96,165,250,0.95)",
+                      padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`,
+                      borderRadius: r.borderRadius.small,
+                      cursor: "pointer",
+                      fontSize: r.fontSize.body,
+                      fontWeight: 750,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 10,
+                      marginBottom: r.spacing.medium,
+                      transition: "all 0.2s ease",
+                    }}
+                    aria-label={isSpeaking ? "Vorlesen stoppen" : "Testvorlesen abspielen"}
+                  >
+                    <FontAwesomeIcon icon={faVolumeHigh} style={{ fontSize: r.fontSize.body + 2 }} />
+                    {isSpeaking ? "Stopp" : "Anhören"}
+                  </button>
+
+                  <div
+                    aria-live="polite"
+                    aria-atomic="true"
+                    style={{
+                      position: "absolute",
+                      width: 1,
+                      height: 1,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {isSpeaking ? "Vorlesen aktiv" : ""}
+                  </div>
+                </>
+              )}
 
               <div style={{ marginTop: r.spacing.large, padding: r.spacing.small, background: "rgba(255,255,255,0.05)", borderRadius: r.borderRadius.small }}>
                 <button

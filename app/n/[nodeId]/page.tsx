@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import type { TreeNodeData } from "@/lib/tree.types";
 import { fetchActiveTreeMeta, fetchNodePage, generateChildren, discoverNode } from "@/lib/tree.client";
 import { useSwipeChoice } from "@/lib/useSwipeChoice";
+import { useTTS } from "@/lib/useTTS";
 
 import { faHeart, faComment, faShare, faCheckToSlot } from "@fortawesome/free-solid-svg-icons";
 import { ActionRail } from "@/components/ActionRail";
@@ -118,6 +119,7 @@ export default function NodePage() {
   const { voterId } = useAuth();
   const { isOpen } = useSession();
   const r = useResponsive();
+  const { speak } = useTTS();
 
   const nodeId = params.nodeId;
 
@@ -157,6 +159,13 @@ export default function NodePage() {
   const [genMsgIdx, setGenMsgIdx] = useState(0);
   const [showFirstLikeCelebration, setShowFirstLikeCelebration] = useState(false);
   const [showFirstVoteCelebration, setShowFirstVoteCelebration] = useState(false);
+
+  // Speak node question via TTS
+  useEffect(() => {
+    if (node?.question) {
+      speak(node.question);
+    }
+  }, [nodeId, node?.question, speak]);
 
   // Cycle generating messages
   useEffect(() => {
@@ -271,7 +280,8 @@ export default function NodePage() {
 
   async function vote(optionId: string) {
     if (!voterId) return;
-    navigator.vibrate?.([20, 10, 20]);
+    const vibOff = localStorage.getItem("rv-vibration-disabled") === "1";
+    if (!vibOff) navigator.vibrate?.([20, 10, 20]);
     const isFirstVote = typeof window !== "undefined" && !localStorage.getItem("rv-first-vote-done");
     const res = await fetch("/api/vote", {
       method: "POST",
@@ -291,7 +301,8 @@ export default function NodePage() {
 
   async function toggleLike(optionId: string) {
     if (!voterId) return;
-    navigator.vibrate?.(30);
+    const vibOff = localStorage.getItem("rv-vibration-disabled") === "1";
+    if (!vibOff) navigator.vibrate?.(30);
     const isFirstLike = typeof window !== "undefined" && !localStorage.getItem("rv-first-like-done");
     const res = await fetch("/api/like", {
       method: "POST",
@@ -316,7 +327,8 @@ export default function NodePage() {
   }
 
   function openComments(optionId: string) {
-    navigator.vibrate?.(15);
+    const vibOff = localStorage.getItem("rv-vibration-disabled") === "1";
+    if (!vibOff) navigator.vibrate?.(15);
     setCommentModalOptionId(optionId);
     setCommentModalOpen(true);
   }
@@ -334,7 +346,8 @@ export default function NodePage() {
   }
 
   async function shareOption(optionId: string) {
-    navigator.vibrate?.(20);
+    const vibOff = localStorage.getItem("rv-vibration-disabled") === "1";
+    if (!vibOff) navigator.vibrate?.(20);
     const url = `${window.location.origin}/o/${encodeURIComponent(optionId)}`;
     if (navigator.share) {
       await navigator.share({ title: "RaumVote", url });
@@ -847,10 +860,10 @@ export default function NodePage() {
                       <div style={{ fontSize: r.fontSize.body, opacity: 0.8, marginTop: 6 }}>{opt.beschreibung}</div>
                     </div>
                     <ActionRail disabled={!isOpen} items={[
-                      { icon: faHeart, active: likedStates[i], count: likeCounts[i], onClick: () => toggleLike(opt.id) },
-                      { icon: faCheckToSlot, active: votedOptionId === opt.id, activeColor: "#60a5fa", onClick: () => vote(opt.id) },
-                      { icon: faComment, count: commentCounts[i], onClick: () => openComments(opt.id) },
-                      { icon: faShare, onClick: () => shareOption(opt.id) },
+                      { icon: faHeart, active: likedStates[i], count: likeCounts[i], ariaLabel: "Gefällt mir", onClick: () => toggleLike(opt.id) },
+                      { icon: faCheckToSlot, active: votedOptionId === opt.id, activeColor: "#60a5fa", ariaLabel: "Abstimmen", onClick: () => vote(opt.id) },
+                      { icon: faComment, count: commentCounts[i], ariaLabel: "Kommentare", onClick: () => openComments(opt.id) },
+                      { icon: faShare, ariaLabel: "Teilen", onClick: () => shareOption(opt.id) },
                     ]} />
                   </div>
                 </div>
@@ -1062,10 +1075,10 @@ export default function NodePage() {
                   <div style={{ fontSize: r.fontSize.body - 1, opacity: 0.8, marginTop: isMed ? 2 : 6 }}>{left.beschreibung}</div>
                 </div>
                 <ActionRail disabled={!isOpen} items={[
-                  { icon: faHeart, active: likedLeft, count: likeCountLeft, onClick: () => toggleLike(left.id) },
-                  { icon: faCheckToSlot, active: votedOptionId === left.id, activeColor: "#60a5fa", onClick: () => vote(left.id) },
-                  { icon: faComment, count: commentCountLeft, onClick: () => openComments(left.id) },
-                  { icon: faShare, onClick: () => shareOption(left.id) },
+                  { icon: faHeart, active: likedLeft, count: likeCountLeft, ariaLabel: "Gefällt mir", onClick: () => toggleLike(left.id) },
+                  { icon: faCheckToSlot, active: votedOptionId === left.id, activeColor: "#60a5fa", ariaLabel: "Abstimmen", onClick: () => vote(left.id) },
+                  { icon: faComment, count: commentCountLeft, ariaLabel: "Kommentare", onClick: () => openComments(left.id) },
+                  { icon: faShare, ariaLabel: "Teilen", onClick: () => shareOption(left.id) },
                 ]} />
               </div>
             </div>
@@ -1084,10 +1097,10 @@ export default function NodePage() {
                   <div style={{ fontSize: r.fontSize.body - 1, opacity: 0.8, marginTop: isMed ? 2 : 6 }}>{right.beschreibung}</div>
                 </div>
                 <ActionRail disabled={!isOpen} items={[
-                  { icon: faHeart, active: likedRight, count: likeCountRight, onClick: () => toggleLike(right.id) },
-                  { icon: faCheckToSlot, active: votedOptionId === right.id, activeColor: "#60a5fa", onClick: () => vote(right.id) },
-                  { icon: faComment, count: commentCountRight, onClick: () => openComments(right.id) },
-                  { icon: faShare, onClick: () => shareOption(right.id) },
+                  { icon: faHeart, active: likedRight, count: likeCountRight, ariaLabel: "Gefällt mir", onClick: () => toggleLike(right.id) },
+                  { icon: faCheckToSlot, active: votedOptionId === right.id, activeColor: "#60a5fa", ariaLabel: "Abstimmen", onClick: () => vote(right.id) },
+                  { icon: faComment, count: commentCountRight, ariaLabel: "Kommentare", onClick: () => openComments(right.id) },
+                  { icon: faShare, ariaLabel: "Teilen", onClick: () => shareOption(right.id) },
                 ]} />
               </div>
             </div>

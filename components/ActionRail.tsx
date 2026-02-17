@@ -10,6 +10,7 @@ export type ActionItem = {
   active?: boolean;
   activeColor?: string;
   disabled?: boolean;
+  ariaLabel?: string;
   onClick: (e: React.MouseEvent) => void;
 };
 
@@ -25,13 +26,14 @@ export function ActionRail({ items, disabled }: { items: ActionItem[]; disabled?
   );
 }
 
-function RoundBtn({ icon, count, active, activeColor = "#ff3b5c", disabled, onClick, size }: ActionItem & { size: number }) {
+function RoundBtn({ icon, count, active, activeColor = "#ff3b5c", disabled, ariaLabel, onClick, size }: ActionItem & { size: number }) {
   const color = active ? activeColor : "white";
   const badgeSize = Math.round(size * 0.35);
 
   return (
     <button
       onClick={(e) => { e.stopPropagation(); if (!disabled) onClick(e); }}
+      aria-label={ariaLabel}
       style={{
         display: "flex",
         flexDirection: "column",

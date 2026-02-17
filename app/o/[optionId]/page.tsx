@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { TreeNodeData } from "@/lib/tree.types";
 import { fetchActiveTreeMeta, fetchSingleNode } from "@/lib/tree.client";
+import { useTTS } from "@/lib/useTTS";
 import { faHeart, faCheckToSlot, faComment, faShare } from "@fortawesome/free-solid-svg-icons";
 import { ActionRail } from "@/components/ActionRail";
 import { CommentBottomSheet } from "@/components/CommentBottomSheet";
@@ -21,6 +22,7 @@ export default function OptionPage() {
   const { voterId } = useAuth();
   const { isOpen } = useSession();
   const r = useResponsive();
+  const { speak } = useTTS();
 
   const [treeId, setTreeId] = useState("");
   const [placeholderUrl, setPlaceholderUrl] = useState("/media/placeholder.jpg");
@@ -43,6 +45,14 @@ export default function OptionPage() {
     if (!optionId) return;
     fetchSingleNode(optionId).then(setNode).catch(() => setNode(null));
   }, [optionId]);
+
+  // Speak option content via TTS
+  useEffect(() => {
+    if (node) {
+      const text = node.context ? `${node.titel}. ${node.beschreibung}. ${node.context}` : `${node.titel}. ${node.beschreibung}`;
+      speak(text);
+    }
+  }, [optionId, node?.id, speak]);
 
   useEffect(() => {
     if (!treeId || !voterId || !optionId) return;
@@ -116,10 +126,10 @@ export default function OptionPage() {
 
           <div style={{ position: "absolute", right: r.spacing.small + 4, bottom: r.spacing.medium, zIndex: 2 }}>
             <ActionRail disabled={!isOpen} items={[
-              { icon: faHeart, active: liked, count: likeCount, onClick: toggleLike },
-              { icon: faCheckToSlot, active: voted, activeColor: "#60a5fa", onClick: vote },
-              { icon: faComment, count: commentCount, onClick: () => setCommentModalOpen(true) },
-              { icon: faShare, onClick: share },
+              { icon: faHeart, active: liked, count: likeCount, ariaLabel: "Gefällt mir", onClick: toggleLike },
+              { icon: faCheckToSlot, active: voted, activeColor: "#60a5fa", ariaLabel: "Abstimmen", onClick: vote },
+              { icon: faComment, count: commentCount, ariaLabel: "Kommentare", onClick: () => setCommentModalOpen(true) },
+              { icon: faShare, ariaLabel: "Teilen", onClick: share },
             ]} />
           </div>
 
