@@ -12,8 +12,10 @@ export default function StartPage() {
   const [tipDismissed, setTipDismissed] = useState(false);
 
   useEffect(() => {
+    // Force show tip for review (dev mode): /start?show-orientation-tip
+    const forceShowTip = new URLSearchParams(window.location.search).get("show-orientation-tip") === "true";
     const hasSeenTip = localStorage.getItem("rv-orientation-tip-seen");
-    if (!hasSeenTip) {
+    if (forceShowTip || !hasSeenTip) {
       setShowOrientationTip(true);
     } else {
       setTipDismissed(true);
