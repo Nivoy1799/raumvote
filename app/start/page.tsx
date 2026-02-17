@@ -9,20 +9,30 @@ export default function StartPage() {
   const router = useRouter();
   const r = useResponsive();
   const [showOrientationTip, setShowOrientationTip] = useState(false);
+  const [tipDismissed, setTipDismissed] = useState(false);
 
   useEffect(() => {
     const hasSeenTip = localStorage.getItem("rv-orientation-tip-seen");
     if (!hasSeenTip) {
       setShowOrientationTip(true);
+    } else {
+      setTipDismissed(true);
     }
-    fetchActiveTreeMeta()
-      .then((meta) => router.replace(`/n/${encodeURIComponent(meta.rootNodeId)}`))
-      .catch(() => router.replace("/error"));
-  }, [router]);
+  }, []);
+
+  // Navigate only after tip is dismissed (or was already seen)
+  useEffect(() => {
+    if (!showOrientationTip || tipDismissed) {
+      fetchActiveTreeMeta()
+        .then((meta) => router.replace(`/n/${encodeURIComponent(meta.rootNodeId)}`))
+        .catch(() => router.replace("/error"));
+    }
+  }, [tipDismissed, showOrientationTip, router]);
 
   const handleCloseTip = () => {
     localStorage.setItem("rv-orientation-tip-seen", "1");
     setShowOrientationTip(false);
+    setTipDismissed(true);
   };
 
   return (
