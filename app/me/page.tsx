@@ -303,17 +303,19 @@ export default function MePage() {
                   width: "100%",
                   padding: `${r.spacing.small + 2}px ${r.spacing.small}px`,
                   borderRadius: r.borderRadius.small,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(0,0,0,0.35)",
+                  border: "1px solid rgba(96,165,250,0.3)",
+                  background: "rgba(96,165,250,0.1)",
                   color: "white",
                   fontSize: r.fontSize.body,
                   marginBottom: r.spacing.medium,
+                  appearance: "none",
+                  cursor: "pointer",
                 }}
               >
-                <option value="none">Keine</option>
-                <option value="deuteranopia">Deuteranopia (Rotgrünblindheit)</option>
-                <option value="protanopia">Protanopia (Rotblindheit)</option>
-                <option value="tritanopia">Tritanopia (Blaugelb-Blindheit)</option>
+                <option value="none" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Keine</option>
+                <option value="deuteranopia" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Deuteranopia (Rotgrünblindheit)</option>
+                <option value="protanopia" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Protanopia (Rotblindheit)</option>
+                <option value="tritanopia" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Tritanopia (Blaugelb-Blindheit)</option>
               </select>
 
               <div style={{ fontSize: r.fontSize.body, fontWeight: 850, marginBottom: r.spacing.small }}>Sprachmodell</div>
@@ -323,15 +325,17 @@ export default function MePage() {
                   width: "100%",
                   padding: `${r.spacing.small + 2}px ${r.spacing.small}px`,
                   borderRadius: r.borderRadius.small,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(0,0,0,0.35)",
+                  border: "1px solid rgba(96,165,250,0.3)",
+                  background: "rgba(96,165,250,0.1)",
                   color: "white",
                   fontSize: r.fontSize.body,
+                  appearance: "none",
+                  cursor: "pointer",
                 }}
               >
-                <option value="default">Standard</option>
-                <option value="fast">Schnell</option>
-                <option value="quality">Qualität</option>
+                <option value="default" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Standard</option>
+                <option value="fast" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Schnell</option>
+                <option value="quality" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Qualität</option>
               </select>
 
               <div style={{ marginTop: r.spacing.large, padding: r.spacing.small, background: "rgba(255,255,255,0.05)", borderRadius: r.borderRadius.small }}>
