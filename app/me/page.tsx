@@ -126,7 +126,7 @@ export default function MePage() {
   const handleLogout = async () => {
     if (confirm("Wirklich abmelden?")) {
       localStorage.removeItem("voterId");
-      router.push("/login");
+      router.push("/denied");
     }
   };
 
@@ -595,7 +595,7 @@ export default function MePage() {
                       });
                       if (res.ok) {
                         localStorage.removeItem("voterId");
-                        router.push("/login");
+                        router.push("/denied");
                       }
                     }
                   }}
