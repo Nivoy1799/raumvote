@@ -59,6 +59,12 @@ export default function AdminPage() {
   const [newSystemPrompt, setNewSystemPrompt] = useState("");
   const [treeSaving, setTreeSaving] = useState(false);
 
+  // Tree reset
+  const [showResetTree, setShowResetTree] = useState(false);
+  const [resetRootTitel, setResetRootTitel] = useState("");
+  const [resetRootBeschreibung, setResetRootBeschreibung] = useState("");
+  const [resetRootContext, setResetRootContext] = useState("");
+
   // Image tasks
   const [imageTasks, setImageTasks] = useState<{ id: string; nodeId: string; nodeTitel: string; status: string; error: string | null; imageUrl: string | null; createdAt: string; startedAt: string | null; completedAt: string | null }[]>([]);
   const [imageTaskStats, setImageTaskStats] = useState<{ pending: number; generating: number; completed: number; failed: number }>({ pending: 0, generating: 0, completed: 0, failed: 0 });
@@ -455,6 +461,34 @@ export default function AdminPage() {
     } else {
       const data = await res.json().catch(() => null);
       setError(data?.error ?? "Fehler beim Erstellen");
+    }
+    setTreeSaving(false);
+  }
+
+  async function resetTree() {
+    if (!treeConfig || !resetRootTitel || !resetRootBeschreibung) return;
+    if (!confirm(`Wirklich den kompletten Baum "${treeConfig.title || treeConfig.treeId}" zurücksetzen? Alle Knoten werden gelöscht!`)) return;
+    setTreeSaving(true);
+    const res = await fetch("/api/admin/tree-reset", {
+      method: "POST",
+      headers: { "x-admin-secret": secret, "content-type": "application/json" },
+      body: JSON.stringify({
+        treeId: treeConfig.treeId,
+        rootTitel: resetRootTitel,
+        rootBeschreibung: resetRootBeschreibung,
+        rootContext: resetRootContext,
+      }),
+    });
+    if (res.ok) {
+      setShowResetTree(false);
+      setResetRootTitel("");
+      setResetRootBeschreibung("");
+      setResetRootContext("");
+      await reloadTreeConfig();
+      setError("");
+    } else {
+      const data = await res.json().catch(() => null);
+      setError(data?.error ?? "Fehler beim Zurücksetzen");
     }
     setTreeSaving(false);
   }
@@ -885,10 +919,45 @@ export default function AdminPage() {
                   Speichern
                 </button>
               </div>
+
+              {/* Reset Tree Button */}
+              {!showResetTree && (
+                <button
+                  style={{ ...s.btnSmall, marginTop: 12, background: "rgba(255,59,92,0.15)", color: "rgba(255,59,92,0.9)", border: "1px solid rgba(255,59,92,0.3)" }}
+                  onClick={() => setShowResetTree(true)}
+                  disabled={treeSaving}
+                >
+                  🔄 Baum zurücksetzen (neue Abstimmung)
+                </button>
+              )}
             </div>
           ) : (
             <div style={s.muted}>Kein Baum konfiguriert.</div>
           )}
+
+          {treeConfig && showResetTree ? (
+            <div style={{ display: "grid", gap: 10, marginTop: 12, padding: 12, border: "1px solid rgba(255,59,92,0.2)", borderRadius: 14, background: "rgba(255,59,92,0.05)" }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "rgba(255,59,92,0.9)" }}>⚠️ Baum zurücksetzen für neue Abstimmung</div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>Dies löscht alle existierenden Knoten und erstellt einen neuen Root-Knoten für eine neue Abstimmung. Benutzer-Daten (Stimmen, Likes, Entdeckungen) bleiben erhalten.</div>
+              <div style={{ fontSize: 12, opacity: 0.6, fontWeight: 800, marginTop: 8 }}>Neuer Root-Knoten</div>
+              <input value={resetRootTitel} onChange={(e) => setResetRootTitel(e.target.value)} placeholder="Titel (max 2 Wörter)" style={s.input} />
+              <input value={resetRootBeschreibung} onChange={(e) => setResetRootBeschreibung(e.target.value)} placeholder="Beschreibung (Stichworte)" style={s.input} />
+              <textarea value={resetRootContext} onChange={(e) => setResetRootContext(e.target.value)} placeholder="Kontext (Szenenbeschreibung)" rows={3} style={{ ...s.input, resize: "vertical" as const }} />
+              <div style={s.row}>
+                <button style={{ ...s.btn, background: "rgba(255,59,92,0.8)", color: "white" }} onClick={resetTree} disabled={treeSaving || !resetRootTitel || !resetRootBeschreibung}>
+                  Bestätigen & Zurücksetzen
+                </button>
+                <button style={s.btnSmall} onClick={() => {
+                  setShowResetTree(false);
+                  setResetRootTitel("");
+                  setResetRootBeschreibung("");
+                  setResetRootContext("");
+                }}>
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           {!showCreateTree ? (
             <button style={{ ...s.btnSmall, marginTop: 10 }} onClick={() => setShowCreateTree(true)}>
