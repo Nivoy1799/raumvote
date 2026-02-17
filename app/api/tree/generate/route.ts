@@ -8,6 +8,8 @@ import type { EpisodeStep } from "@/lib/openai";
 import { generateNodeImage, buildImagePrompt } from "@/lib/imageGen";
 import { checkR2Health } from "@/lib/r2";
 
+const PRE_LOAD_DEPTH = 5;
+
 async function buildEpisode(nodeId: string): Promise<EpisodeStep[]> {
   const path: EpisodeStep[] = [];
   let currentId: string | null = nodeId;
@@ -25,6 +27,71 @@ async function buildEpisode(nodeId: string): Promise<EpisodeStep[]> {
   }
 
   return path;
+}
+
+async function preGenerateDescendants(
+  nodeId: string,
+  treeId: string,
+  currentDepth: number,
+  config: any
+): Promise<void> {
+  // Stop recursion at max depth
+  if (currentDepth >= PRE_LOAD_DEPTH) return;
+
+  const node = await prisma.treeNode.findUnique({ where: { id: nodeId } });
+  if (!node || node.generated) return;
+
+  try {
+    // Generate children for this node
+    const episode = await buildEpisode(nodeId);
+    const generated = await generateTreeNodes(config.systemPrompt, episode, config.modelName);
+
+    const [leftChild, rightChild] = await Promise.all([
+      prisma.treeNode.create({
+        data: {
+          treeId,
+          titel: generated.left.titel,
+          beschreibung: generated.left.beschreibung,
+          context: generated.left.context,
+          mediaUrl: config.placeholderUrl,
+          side: "left",
+          depth: currentDepth + 1,
+          parentId: nodeId,
+          discovererHash: null, // Pre-generated nodes have no discoverer yet
+        },
+      }),
+      prisma.treeNode.create({
+        data: {
+          treeId,
+          titel: generated.right.titel,
+          beschreibung: generated.right.beschreibung,
+          context: generated.right.context,
+          mediaUrl: config.placeholderUrl,
+          side: "right",
+          depth: currentDepth + 1,
+          parentId: nodeId,
+          discovererHash: null, // Pre-generated nodes have no discoverer yet
+        },
+      }),
+    ]);
+
+    // Mark parent as generated
+    await prisma.treeNode.update({
+      where: { id: nodeId },
+      data: {
+        generated: true,
+        question: generated.question,
+      },
+    });
+
+    // Recursively pre-generate descendants
+    await Promise.all([
+      preGenerateDescendants(leftChild.id, treeId, currentDepth + 1, config),
+      preGenerateDescendants(rightChild.id, treeId, currentDepth + 1, config),
+    ]);
+  } catch (err) {
+    console.error(`[preGenerate] Failed for node ${nodeId}:`, err);
+  }
 }
 
 export async function POST(req: Request) {
@@ -72,11 +139,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Discovery is currently disabled" }, { status: 403 });
   }
 
-  // Build episode and call OpenAI
+  // Build episode and call OpenAI for immediate children
   const episode = await buildEpisode(nodeId);
   const generated = await generateTreeNodes(config.systemPrompt, episode, config.modelName);
 
-  // Create children + update parent in a transaction
+  // Create children + pre-generate descendants in a transaction
   const result = await prisma.$transaction(async (tx) => {
     // Double-check not generated (race condition guard)
     const fresh = await tx.treeNode.findUnique({ where: { id: nodeId } });
@@ -132,6 +199,16 @@ export async function POST(req: Request) {
       right: rightChild,
       isDiscoverer: true,
     };
+  });
+
+  // Fire-and-forget pre-generation of descendants (background job)
+  after(async () => {
+    console.log("[generate] Starting background pre-generation for nodeId =", nodeId);
+    await Promise.all([
+      preGenerateDescendants(result.left!.id, node.treeId, node.depth + 2, config),
+      preGenerateDescendants(result.right!.id, node.treeId, node.depth + 2, config),
+    ]);
+    console.log("[generate] Finished pre-generation for nodeId =", nodeId);
   });
 
   // Fire-and-forget image generation with task tracking (only if R2 is healthy)
