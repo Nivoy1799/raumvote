@@ -3,7 +3,15 @@
 import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSliders, faImage, faNetworkWired, faKey, faBars, faXmark } from "@fortawesome/free-solid-svg-icons";
+import {
+  faSliders,
+  faImage,
+  faNetworkWired,
+  faKey,
+  faServer,
+  faBars,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import { AdminProvider, useAdmin } from "./AdminContext";
 import { s, SIDEBAR_W, HEADER_H } from "./styles";
 
@@ -14,6 +22,7 @@ const sections: { key: string; path: string; label: string; icon: IconDefinition
   { key: "images", path: "/admin/images", label: "Bilder", icon: faImage },
   { key: "nodes", path: "/admin/nodes", label: "Baum", icon: faNetworkWired },
   { key: "tokens", path: "/admin/tokens", label: "Tokens", icon: faKey },
+  { key: "infra", path: "/admin/infra", label: "Infra", icon: faServer },
 ];
 
 const statusColors: Record<string, string> = {
