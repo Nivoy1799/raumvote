@@ -93,7 +93,7 @@ export const s: Record<string, React.CSSProperties> = {
 
   // ── Content area ──
   contentArea: {
-    minHeight: "100dvh",
+    height: "100dvh",
     background: "black",
     overflow: "auto",
   },
