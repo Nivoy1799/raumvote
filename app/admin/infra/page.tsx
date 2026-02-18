@@ -49,7 +49,12 @@ interface InstanceInfo {
   history: { latency: number; time: number; ok: boolean }[];
 }
 
-const HISTORY_MAX = 20;
+const HISTORY_MAX = 90; // 15 min × 6 probes/min
+const TIME_WINDOWS = [
+  { label: "1m", ms: 60_000 },
+  { label: "5m", ms: 300_000 },
+  { label: "15m", ms: 900_000 },
+] as const;
 
 /* ── Helpers ── */
 
@@ -93,6 +98,7 @@ export default function InfraPage() {
   const [servicesLoading, setServicesLoading] = useState(true);
   const [instances, setInstances] = useState<Map<string, InstanceInfo>>(new Map());
   const [probing, setProbing] = useState(false);
+  const [timeWindow, setTimeWindow] = useState(0); // index into TIME_WINDOWS
   const instancesRef = useRef<Map<string, InstanceInfo>>(new Map());
 
   // Poll nginx stats
@@ -199,10 +205,11 @@ export default function InfraPage() {
       }
     }
 
-    // Instance not seen in 10 probes → mark as dead immediately
+    // Instance not seen in 10 probes → mark as dead + add red bar to history
     for (const [addr, info] of current) {
       if (!seenAddrs.has(addr)) {
-        current.set(addr, { ...info, dead: true, ok: false });
+        const history = [...info.history, { latency: 0, time: now, ok: false }].slice(-HISTORY_MAX);
+        current.set(addr, { ...info, dead: true, ok: false, history });
       }
     }
 
@@ -226,7 +233,7 @@ export default function InfraPage() {
     <>
       {/* ── App Instances ── */}
       <section style={s.card}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4, flexWrap: "wrap" }}>
           <div style={s.cardTitle}>App Instanzen</div>
           <span
             style={{
@@ -237,6 +244,21 @@ export default function InfraPage() {
           >
             {aliveCount}/{instanceList.length} aktiv
           </span>
+          <div style={{ display: "flex", gap: 2, marginLeft: "auto" }}>
+            {TIME_WINDOWS.map((w, i) => (
+              <button
+                key={w.label}
+                onClick={() => setTimeWindow(i)}
+                style={{
+                  ...s.btnTiny,
+                  background: timeWindow === i ? "rgba(96,165,250,0.3)" : undefined,
+                  borderColor: timeWindow === i ? "rgba(96,165,250,0.5)" : undefined,
+                }}
+              >
+                {w.label}
+              </button>
+            ))}
+          </div>
           <button style={s.btnTiny} onClick={probeInstances} disabled={probing}>
             {probing ? "..." : "Probe"}
           </button>
@@ -271,20 +293,26 @@ export default function InfraPage() {
                     )}
                   </div>
                 </div>
-                {/* Mini sparkline */}
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 1, height: 20, flexShrink: 0 }}>
-                  {inst.history.slice(-12).map((h, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        width: 3,
-                        height: Math.max(2, Math.min(20, h.latency / 10)),
-                        borderRadius: 1,
-                        background: h.ok ? "rgba(96,165,250,0.7)" : "#ff3b5c",
-                      }}
-                    />
-                  ))}
-                </div>
+                {/* Mini sparkline filtered by time window */}
+                {(() => {
+                  const cutoff = Date.now() - TIME_WINDOWS[timeWindow].ms;
+                  const filtered = inst.history.filter((h) => h.time >= cutoff);
+                  return (
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 1, height: 24, flexShrink: 0 }}>
+                      {filtered.map((h, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            width: 3,
+                            height: Math.max(2, Math.min(24, h.latency / 8)),
+                            borderRadius: 1,
+                            background: h.ok ? "rgba(96,165,250,0.7)" : "#ff3b5c",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
