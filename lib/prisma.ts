@@ -3,12 +3,12 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
 declare global {
-  // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined;
 }
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL, // pooled is OK here
+  connectionString: process.env.DATABASE_URL,
+  max: parseInt(process.env.DB_POOL_SIZE || "10", 10),
 });
 
 const adapter = new PrismaPg(pool);
