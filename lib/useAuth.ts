@@ -15,7 +15,8 @@ export function useAuth() {
       return;
     }
 
-    fetch(`/api/auth/validate?token=${encodeURIComponent(id)}`)
+    // Check JWT cookie validity; falls back to legacy token validation
+    fetch(`/api/auth/me?token=${encodeURIComponent(id)}`)
       .then((r) => r.json())
       .then((data) => {
         if (data?.valid) {

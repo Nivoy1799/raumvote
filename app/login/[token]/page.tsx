@@ -8,16 +8,21 @@ export default function LoginPage() {
   const params = useParams<{ token: string }>();
   const token = params.token;
 
-  const [status, setStatus] = useState<"loading" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "error">(() => (token ? "loading" : "error"));
 
   useEffect(() => {
-    if (!token) { setStatus("error"); return; }
+    if (!token) return;
 
     (async () => {
-      const res = await fetch(`/api/auth/validate?token=${encodeURIComponent(token)}`);
+      // Exchange UUID token for JWT cookie
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
       const data = await res.json().catch(() => null);
 
-      if (data?.valid) {
+      if (data?.ok) {
         localStorage.setItem("voterId", token);
         router.replace("/start");
       } else {
@@ -48,7 +53,16 @@ export default function LoginPage() {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  shell: { position: "fixed", inset: 0, background: "black", color: "white", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 },
+  shell: {
+    position: "fixed",
+    inset: 0,
+    background: "black",
+    color: "white",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
+  },
   center: { textAlign: "center", padding: 24 },
   icon: { fontSize: 48, marginBottom: 16 },
   title: { fontSize: 22, fontWeight: 950, letterSpacing: -0.3 },

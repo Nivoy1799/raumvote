@@ -1,21 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashVoterId } from "@/lib/voterHash";
-import { validateToken } from "@/lib/validateToken";
+import { getVoterHash } from "@/lib/getVoter";
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const voterId = searchParams.get("voterId") ?? "";
-
-  if (!voterId) {
-    return NextResponse.json({ error: "Missing voterId" }, { status: 400 });
-  }
-
-  if (!(await validateToken(voterId))) {
+  const voterHash = await getVoterHash(req);
+  if (!voterHash) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const voterHash = hashVoterId(voterId);
 
   const likes = await prisma.like.findMany({
     where: { voterHash },

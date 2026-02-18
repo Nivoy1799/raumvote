@@ -1,24 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashVoterId } from "@/lib/voterHash";
-import { validateToken } from "@/lib/validateToken";
+import { getVoterHash } from "@/lib/getVoter";
 import { getActiveSession, isSessionOpen } from "@/lib/votingSession";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("sessionId") ?? "";
   const optionId = searchParams.get("optionId") ?? "";
-  const voterId = searchParams.get("voterId") ?? "";
 
-  if (!sessionId || !optionId || !voterId) {
+  if (!sessionId || !optionId) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
 
-  if (!(await validateToken(voterId))) {
+  const voterHash = await getVoterHash(req);
+  if (!voterHash) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const voterHash = hashVoterId(voterId);
 
   const comments = await prisma.comment.findMany({
     where: { sessionId, optionId },
@@ -49,13 +46,14 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { sessionId, optionId, voterId, text, parentId } = body;
+  const { sessionId, optionId, text, parentId } = body;
 
-  if (!sessionId || !optionId || !voterId || !text) {
+  if (!sessionId || !optionId || !text) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
 
-  if (!(await validateToken(voterId))) {
+  const voterHash = await getVoterHash(req, body);
+  if (!voterHash) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -75,8 +73,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Parent comment not found" }, { status: 404 });
     }
   }
-
-  const voterHash = hashVoterId(voterId);
 
   const user = await prisma.user.findUnique({
     where: { voterHash },

@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashVoterId } from "@/lib/voterHash";
-import { validateToken } from "@/lib/validateToken";
+import { getVoterHash } from "@/lib/getVoter";
 import { getActiveSession, isSessionOpen } from "@/lib/votingSession";
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { commentId, voterId } = body;
+  const { commentId } = body;
 
-  if (!commentId || !voterId) {
+  if (!commentId) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
 
-  if (!(await validateToken(voterId))) {
+  const voterHash = await getVoterHash(req, body);
+  if (!voterHash) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -20,8 +20,6 @@ export async function POST(req: Request) {
   if (!session || !isSessionOpen(session)) {
     return NextResponse.json({ error: "Voting period closed" }, { status: 403 });
   }
-
-  const voterHash = hashVoterId(voterId);
 
   const existing = await prisma.commentLike.findUnique({
     where: { commentId_voterHash: { commentId, voterHash } },

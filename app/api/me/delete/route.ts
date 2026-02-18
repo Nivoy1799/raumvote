@@ -1,26 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashVoterId } from "@/lib/voterHash";
-import { validateToken } from "@/lib/validateToken";
+import { getVoterHash } from "@/lib/getVoter";
 
 export async function POST(req: Request) {
-  const { voterId } = await req.json().catch(() => ({}));
+  const body = await req.json().catch(() => ({}));
 
-  if (!voterId) {
-    return NextResponse.json({ error: "Missing voterId" }, { status: 400 });
-  }
-
-  if (!(await validateToken(voterId))) {
+  const voterHash = await getVoterHash(req, body);
+  if (!voterHash) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const voterHash = hashVoterId(voterId);
-
   try {
     // Delete user profile (username and avatar)
-    await prisma.user.delete({
-      where: { voterHash },
-    }).catch(() => null); // User might not exist
+    await prisma.user
+      .delete({
+        where: { voterHash },
+      })
+      .catch(() => null); // User might not exist
 
     // Anonymize votes by removing any association
     // Votes remain in DB but are now untrackable

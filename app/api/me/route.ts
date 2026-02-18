@@ -1,18 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashVoterId } from "@/lib/voterHash";
-import { validateToken } from "@/lib/validateToken";
+import { getVoterHash } from "@/lib/getVoter";
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const voterId = searchParams.get("voterId") ?? "";
-  if (!voterId) return NextResponse.json({ error: "Missing voterId" }, { status: 400 });
-
-  if (!(await validateToken(voterId))) {
+  const voterHash = await getVoterHash(req);
+  if (!voterHash) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const voterHash = hashVoterId(voterId);
 
   const user = await prisma.user.upsert({
     where: { voterHash },
@@ -26,12 +20,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
-  const voterId = (body?.voterId ?? "").toString();
   const usernameRaw = (body?.username ?? "").toString().trim();
 
-  if (!voterId) return NextResponse.json({ error: "Missing voterId" }, { status: 400 });
-
-  if (!(await validateToken(voterId))) {
+  const voterHash = await getVoterHash(req, body ?? undefined);
+  if (!voterHash) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -46,8 +38,6 @@ export async function POST(req: Request) {
   if (avatarUrl && (!avatarUrl.startsWith("data:image/") || avatarUrl.length > 150_000)) {
     return NextResponse.json({ error: "Invalid avatar" }, { status: 400 });
   }
-
-  const voterHash = hashVoterId(voterId);
 
   await prisma.user.upsert({
     where: { voterHash },

@@ -1,23 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashVoterId } from "@/lib/voterHash";
-import { validateToken } from "@/lib/validateToken";
+import { getVoterHash } from "@/lib/getVoter";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("sessionId") ?? "";
   const optionId = searchParams.get("optionId") ?? "";
-  const voterId = searchParams.get("voterId") ?? "";
 
-  if (!sessionId || !optionId || !voterId) {
+  if (!sessionId || !optionId) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
 
-  if (!(await validateToken(voterId))) {
+  const voterHash = await getVoterHash(req);
+  if (!voterHash) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const voterHash = hashVoterId(voterId);
 
   const like = await prisma.like.findUnique({
     where: {
