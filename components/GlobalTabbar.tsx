@@ -8,14 +8,11 @@ import {
   faWandSparkles,
   faUser,
 } from "@fortawesome/free-solid-svg-icons";
-import { useSession } from "@/lib/useSession";
-import { SessionBanner } from "@/components/SessionBanner";
 import { useResponsive } from "@/lib/useResponsive";
 
 export default function GlobalTabbar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { session } = useSession();
   const r = useResponsive();
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/login") || pathname === "/denied") return null;
@@ -47,17 +44,14 @@ export default function GlobalTabbar() {
   };
 
   return (
-    <>
-      <SessionBanner session={session} />
-      <div style={blocker}>
-        <footer style={{ ...tabbar, pointerEvents: "auto" }}>
-          <Tab icon={faHouse} active={pathname.startsWith("/start")} onClick={() => router.push("/start")} iconSize={r.fontSize.button + 4} />
-          <Tab icon={faChartSimple} active={pathname.startsWith("/results")} onClick={() => router.push("/results")} iconSize={r.fontSize.button + 4} />
-          <Tab icon={faWandSparkles} active={pathname.startsWith("/dream")} onClick={() => router.push("/dream")} iconSize={r.fontSize.button + 4} />
-          <Tab icon={faUser} active={pathname.startsWith("/me")} onClick={() => router.push("/me")} iconSize={r.fontSize.button + 4} />
-        </footer>
-      </div>
-    </>
+    <div style={blocker}>
+      <footer style={{ ...tabbar, pointerEvents: "auto" }}>
+        <Tab icon={faHouse} active={pathname.startsWith("/start")} onClick={() => router.push("/start")} iconSize={r.fontSize.button + 4} />
+        <Tab icon={faChartSimple} active={pathname.startsWith("/results")} onClick={() => router.push("/results")} iconSize={r.fontSize.button + 4} />
+        <Tab icon={faWandSparkles} active={pathname.startsWith("/dream")} onClick={() => router.push("/dream")} iconSize={r.fontSize.button + 4} />
+        <Tab icon={faUser} active={pathname.startsWith("/me")} onClick={() => router.push("/me")} iconSize={r.fontSize.button + 4} />
+      </footer>
+    </div>
   );
 }
 
