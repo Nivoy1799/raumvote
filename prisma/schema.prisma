@@ -149,3 +149,18 @@ model ImageTask {
   @@index([sessionId, status])
   @@index([nodeId])
 }
+
+model JobQueue {
+  id          String    @id @default(cuid())
+  type        String    // "pre-generation" | "image-process"
+  payload     Json
+  status      String    @default("pending") // pending | processing | completed | failed
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  error       String?   @db.Text
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  @@index([status, createdAt])
+}

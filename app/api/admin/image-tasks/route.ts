@@ -1,4 +1,4 @@
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkR2Health } from "@/lib/r2";
 
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
   const filterStatus = url.searchParams.get("status") || undefined;
   const filterTitle = url.searchParams.get("title") || undefined;
   const sortField = url.searchParams.get("sort") || "createdAt";
-  const sortDir = url.searchParams.get("sortDir") === "asc" ? "asc" as const : "desc" as const;
+  const sortDir = url.searchParams.get("sortDir") === "asc" ? ("asc" as const) : ("desc" as const);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = sessionId ? { sessionId } : {};
@@ -34,9 +34,12 @@ export async function GET(req: Request) {
   const validSorts = ["createdAt", "status", "completedAt", "startedAt"];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orderBy: any[] = validSorts.includes(sortField)
-    ? [{ [sortField]: sortField === "completedAt" || sortField === "startedAt"
-        ? { sort: sortDir, nulls: "last" }
-        : sortDir }]
+    ? [
+        {
+          [sortField]:
+            sortField === "completedAt" || sortField === "startedAt" ? { sort: sortDir, nulls: "last" } : sortDir,
+        },
+      ]
     : [{ createdAt: "desc" }];
 
   // Auto-mark tasks stuck in "generating" for >5 minutes as failed
@@ -73,7 +76,7 @@ export async function GET(req: Request) {
   return NextResponse.json({ tasks, stats, total, page, pageSize });
 }
 
-// Retry failed tasks
+// Actions on image tasks — all just set status to "pending", worker processes them
 export async function POST(req: Request) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -88,42 +91,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Task not found or not failed" }, { status: 400 });
     }
 
+    // Reset to pending — worker will pick it up
     await prisma.imageTask.update({
       where: { id: taskId },
       data: { status: "pending", error: null, startedAt: null, completedAt: null },
     });
 
-    const { generateNodeImage, buildImagePrompt } = await import("@/lib/imageGen");
-    const node = await prisma.treeNode.findUnique({ where: { id: task.nodeId } });
-    const session = await prisma.votingSession.findUnique({ where: { id: task.sessionId } });
-    if (!node || !session) {
-      return NextResponse.json({ error: "Node or session not found" }, { status: 404 });
-    }
-
-    const imageConfig = {
-      imageModel: session.imageModel,
-      imagePrompt: session.imagePrompt,
-      referenceMedia: session.referenceMedia,
-    };
-
-    after(async () => {
-      await prisma.imageTask.update({ where: { id: taskId }, data: { status: "generating", startedAt: new Date() } });
-      try {
-        const prompt = buildImagePrompt(node, session.imagePrompt);
-        const imgUrl = await generateNodeImage(prompt, node.id, imageConfig);
-        if (imgUrl) {
-          await prisma.treeNode.update({ where: { id: node.id }, data: { mediaUrl: imgUrl } });
-          await prisma.imageTask.update({ where: { id: taskId }, data: { status: "completed", imageUrl: imgUrl, completedAt: new Date() } });
-        } else {
-          await prisma.imageTask.update({ where: { id: taskId }, data: { status: "failed", error: "Generation returned null", completedAt: new Date() } });
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        await prisma.imageTask.update({ where: { id: taskId }, data: { status: "failed", error: msg, completedAt: new Date() } });
-      }
-    });
-
-    return NextResponse.json({ ok: true, message: "Retry started" });
+    return NextResponse.json({ ok: true, message: "Retry queued" });
   }
 
   if (action === "retry-all-failed" && sessionId) {
@@ -132,54 +106,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `R2 nicht erreichbar: ${r2.error}` }, { status: 503 });
     }
 
-    const failedTasks = await prisma.imageTask.findMany({
-      where: { sessionId, status: "failed" },
-    });
-
-    if (failedTasks.length === 0) {
-      return NextResponse.json({ ok: true, retried: 0 });
-    }
-
-    const { generateNodeImage, buildImagePrompt } = await import("@/lib/imageGen");
-    const session = await prisma.votingSession.findUnique({ where: { id: sessionId } });
-    if (!session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
-    }
-
-    const imageConfig = {
-      imageModel: session.imageModel,
-      imagePrompt: session.imagePrompt,
-      referenceMedia: session.referenceMedia,
-    };
-
-    await prisma.imageTask.updateMany({
+    const result = await prisma.imageTask.updateMany({
       where: { sessionId, status: "failed" },
       data: { status: "pending", error: null, startedAt: null, completedAt: null },
     });
 
-    after(async () => {
-      for (const task of failedTasks) {
-        const node = await prisma.treeNode.findUnique({ where: { id: task.nodeId } });
-        if (!node) continue;
-
-        await prisma.imageTask.update({ where: { id: task.id }, data: { status: "generating", startedAt: new Date() } });
-        try {
-          const prompt = buildImagePrompt(node, session.imagePrompt);
-          const imgUrl = await generateNodeImage(prompt, node.id, imageConfig);
-          if (imgUrl) {
-            await prisma.treeNode.update({ where: { id: node.id }, data: { mediaUrl: imgUrl } });
-            await prisma.imageTask.update({ where: { id: task.id }, data: { status: "completed", imageUrl: imgUrl, completedAt: new Date() } });
-          } else {
-            await prisma.imageTask.update({ where: { id: task.id }, data: { status: "failed", error: "Generation returned null", completedAt: new Date() } });
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          await prisma.imageTask.update({ where: { id: task.id }, data: { status: "failed", error: msg, completedAt: new Date() } });
-        }
-      }
-    });
-
-    return NextResponse.json({ ok: true, retried: failedTasks.length });
+    return NextResponse.json({ ok: true, retried: result.count });
   }
 
   if (action === "backfill" && sessionId) {
@@ -201,10 +133,7 @@ export async function POST(req: Request) {
       where: {
         sessionId,
         id: { notIn: existingTaskNodeIds },
-        OR: [
-          { mediaUrl: session.placeholderUrl },
-          { mediaUrl: null },
-        ],
+        OR: [{ mediaUrl: session.placeholderUrl }, { mediaUrl: null }],
       },
     });
 
@@ -212,6 +141,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, created: 0 });
     }
 
+    // Create pending tasks — worker will pick them up
     await prisma.imageTask.createMany({
       data: nodesNeedingImages.map((node) => ({
         sessionId,
@@ -221,91 +151,18 @@ export async function POST(req: Request) {
       })),
     });
 
-    const { generateNodeImage, buildImagePrompt } = await import("@/lib/imageGen");
-    const imageConfig = {
-      imageModel: session.imageModel,
-      imagePrompt: session.imagePrompt,
-      referenceMedia: session.referenceMedia,
-    };
-
-    after(async () => {
-      const tasks = await prisma.imageTask.findMany({
-        where: { sessionId, nodeId: { in: nodesNeedingImages.map((n) => n.id) }, status: "pending" },
-      });
-
-      for (const task of tasks) {
-        const node = nodesNeedingImages.find((n) => n.id === task.nodeId);
-        if (!node) continue;
-
-        await prisma.imageTask.update({ where: { id: task.id }, data: { status: "generating", startedAt: new Date() } });
-        try {
-          const prompt = buildImagePrompt(node, session.imagePrompt);
-          const imgUrl = await generateNodeImage(prompt, node.id, imageConfig);
-          if (imgUrl) {
-            await prisma.treeNode.update({ where: { id: node.id }, data: { mediaUrl: imgUrl } });
-            await prisma.imageTask.update({ where: { id: task.id }, data: { status: "completed", imageUrl: imgUrl, completedAt: new Date() } });
-          } else {
-            await prisma.imageTask.update({ where: { id: task.id }, data: { status: "failed", error: "Generation returned null", completedAt: new Date() } });
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          await prisma.imageTask.update({ where: { id: task.id }, data: { status: "failed", error: msg, completedAt: new Date() } });
-        }
-      }
-    });
-
     return NextResponse.json({ ok: true, created: nodesNeedingImages.length });
   }
 
   if (action === "restart-pending" && sessionId) {
-    const r2 = await checkR2Health();
-    if (!r2.ok) {
-      return NextResponse.json({ error: `R2 nicht erreichbar: ${r2.error}` }, { status: 503 });
-    }
-
-    const pendingTasks = await prisma.imageTask.findMany({
-      where: { sessionId, status: "pending" },
+    // Pending tasks are already in queue for the worker — nothing to do
+    // But reset any that might have gotten stuck
+    await prisma.imageTask.updateMany({
+      where: { sessionId, status: "generating" },
+      data: { status: "pending", startedAt: null },
     });
 
-    if (pendingTasks.length === 0) {
-      return NextResponse.json({ ok: true, restarted: 0 });
-    }
-
-    const { generateNodeImage, buildImagePrompt } = await import("@/lib/imageGen");
-    const session = await prisma.votingSession.findUnique({ where: { id: sessionId } });
-    if (!session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
-    }
-
-    const imageConfig = {
-      imageModel: session.imageModel,
-      imagePrompt: session.imagePrompt,
-      referenceMedia: session.referenceMedia,
-    };
-
-    after(async () => {
-      for (const task of pendingTasks) {
-        const node = await prisma.treeNode.findUnique({ where: { id: task.nodeId } });
-        if (!node) continue;
-
-        await prisma.imageTask.update({ where: { id: task.id }, data: { status: "generating", startedAt: new Date() } });
-        try {
-          const prompt = buildImagePrompt(node, session.imagePrompt);
-          const imgUrl = await generateNodeImage(prompt, node.id, imageConfig);
-          if (imgUrl) {
-            await prisma.treeNode.update({ where: { id: node.id }, data: { mediaUrl: imgUrl } });
-            await prisma.imageTask.update({ where: { id: task.id }, data: { status: "completed", imageUrl: imgUrl, completedAt: new Date() } });
-          } else {
-            await prisma.imageTask.update({ where: { id: task.id }, data: { status: "failed", error: "Generation returned null", completedAt: new Date() } });
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          await prisma.imageTask.update({ where: { id: task.id }, data: { status: "failed", error: msg, completedAt: new Date() } });
-        }
-      }
-    });
-
-    return NextResponse.json({ ok: true, restarted: pendingTasks.length });
+    return NextResponse.json({ ok: true, message: "Reset stuck tasks to pending" });
   }
 
   if (action === "clear-completed" && sessionId) {
