@@ -1,60 +1,78 @@
 # Load Test
 
-## Prerequisites
+## Voraussetzungen
 
-- [hey](https://github.com/rakyll/hey) HTTP load generator
+- [hey](https://github.com/rakyll/hey) HTTP Load Generator
   ```bash
   brew install hey        # macOS
   go install github.com/rakyll/hey@latest  # Go
   ```
-- Running system (`docker compose up` or `npm run dev`)
-- A valid `AccessToken` UUID from the database
+- Laufendes System (`docker compose up` oder `npm run dev`)
+- Ein gültiger `AccessToken` UUID aus der Datenbank
 
-## Running
+## Ausführung
 
 ```bash
-TOKEN=<your-access-token-uuid> ./loadtest/run.sh
+TOKEN=<access-token-uuid> ./loadtest/run.sh
 ```
 
-Optional environment variables:
-| Variable | Default | Description |
-|---|---|---|
-| `BASE_URL` | `http://localhost` | Base URL of the running app |
-| `TOKEN` | (required) | AccessToken UUID for JWT login |
-| `REQUESTS` | `1000` | Total number of requests |
-| `CONCURRENCY` | `50` | Number of concurrent workers |
+| Variable   | Default            | Beschreibung                   |
+| ---------- | ------------------ | ------------------------------ |
+| `TOKEN`    | (erforderlich)     | AccessToken UUID für JWT Login |
+| `BASE_URL` | `http://localhost` | Basis-URL der laufenden App    |
 
-## What It Tests
+## Was wird getestet?
 
-1. **Logs in** via `POST /api/auth/login` to obtain a JWT cookie
-2. **Runs load test** against `GET /api/auth/me` (JWT-protected endpoint)
-3. **Saves results** to `loadtest/results.txt`
+Das Skript führt **6 Test-Szenarien** gegen JWT-geschützte Endpoints aus:
 
-The `/api/auth/me` endpoint verifies the JWT cookie on every request, making it a good target for testing JWT auth under load.
+| #   | Test             | Endpoint           | Requests | Concurrency | Zweck                           |
+| --- | ---------------- | ------------------ | -------- | ----------- | ------------------------------- |
+| 1   | Warmup           | `/api/auth/me`     | 100      | 10          | JIT + Connection Pool aufwärmen |
+| 2   | Baseline         | `/api/auth/me`     | 1000     | 50          | Normaler Durchsatz              |
+| 3   | High Concurrency | `/api/auth/me`     | 2000     | 200         | Verhalten unter Spitzenlast     |
+| 4   | Sustained Load   | `/api/auth/me`     | 5000     | 100         | Stabilität über längere Zeit    |
+| 5   | Health Check     | `/api/health`      | 1000     | 100         | DB-Overhead isolieren           |
+| 6   | Vote Status      | `/api/vote/status` | 1000     | 50          | JWT + DB Query kombiniert       |
 
-## Failover Test
+## Ausgabe
 
-With multiple replicas running behind Traefik:
+- Echtzeit-Output im Terminal
+- Detaillierter Report in `loadtest/report.md` mit:
+  - Ergebnis-Tabelle aller Tests
+  - Bottleneck-Analyse
+  - Skalierungsstrategie
+  - Failover-Anleitung
+
+## Architektur unter Last
+
+```
+Client (hey)
+  │
+  ├── 50-200 gleichzeitige Verbindungen
+  │
+  ▼
+nginx (Round-Robin Load Balancer)
+  │
+  ├── → App-1 (Node.js, DB Pool: 10)
+  │                │
+  └── → App-2 (Node.js, DB Pool: 10)
+                   │
+                   ▼
+           Neon Postgres (Remote)
+```
+
+## Failover-Test
 
 ```bash
-# Check running replicas
+# Replikas prüfen
 docker compose ps
 
-# Stop one app replica
-docker compose stop app --index 1
+# Eine App-Instanz stoppen
+docker stop raumvote-app-1
 
-# Re-run load test — should still work via remaining replica(s)
+# Load Test erneut ausführen — System muss weiter funktionieren
 TOKEN=<token> ./loadtest/run.sh
 
-# Restart stopped replica
-docker compose start app
+# Instanz wieder starten
+docker start raumvote-app-1
 ```
-
-## Interpreting Results
-
-Key metrics from `hey` output:
-
-- **Requests/sec** — Throughput
-- **Average / P50 / P95 / P99** — Latency distribution
-- **Status code distribution** — Should be 100% 200s
-- **Error distribution** — Should be empty
