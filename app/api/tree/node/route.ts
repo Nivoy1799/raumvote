@@ -18,10 +18,12 @@ export async function GET(req: Request) {
   }
 
   // Increment visit count (fire-and-forget)
-  prisma.treeNode.update({
-    where: { id: nodeId },
-    data: { amountVisits: { increment: 1 } },
-  }).catch(() => {});
+  prisma.treeNode
+    .update({
+      where: { id: nodeId },
+      data: { amountVisits: { increment: 1 } },
+    })
+    .catch(() => {});
 
   // Fetch children if generated
   let left = null;

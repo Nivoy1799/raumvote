@@ -2,12 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import {
-  motion,
-  useMotionValue,
-  useTransform,
-  type PanInfo,
-} from "framer-motion";
+import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import type { TreeNodeData } from "@/lib/tree.types";
 import { useResponsive } from "@/lib/useResponsive";
 
@@ -24,10 +19,11 @@ type Props = {
 /* ── Reduced-motion detection ── */
 
 function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
+  const [reduced, setReduced] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
     const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
@@ -56,8 +52,7 @@ const VARIANT_CONFIG: Record<
     blurDuration: 1.5,
     staggerDelay: 0.2,
     extraLine: null,
-    gradientFallback:
-      "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
+    gradientFallback: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
   },
   visited: {
     badgeText: "Bekannter Pfad",
@@ -66,8 +61,7 @@ const VARIANT_CONFIG: Record<
     blurDuration: 0.8,
     staggerDelay: 0.12,
     extraLine: null,
-    gradientFallback:
-      "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
+    gradientFallback: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
   },
   rare: {
     badgeText: "Seltener Pfad",
@@ -76,34 +70,23 @@ const VARIANT_CONFIG: Record<
     blurDuration: 2.2,
     staggerDelay: 0.25,
     extraLine: "Ein verborgener Pfad",
-    gradientFallback:
-      "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%)",
+    gradientFallback: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%)",
   },
 };
 
 /* ── Component ── */
 
-export function DiscoveryRevealCard({
-  node,
-  variant,
-  totalPaths,
-  onExplore,
-  onLater,
-}: Props) {
+export function DiscoveryRevealCard({ node, variant, totalPaths, onExplore, onLater }: Props) {
   const r = useResponsive();
   const reducedMotion = usePrefersReducedMotion();
   const [descExpanded, setDescExpanded] = useState(false);
   const [exiting, setExiting] = useState<"explore" | "later" | null>(null);
   const config = VARIANT_CONFIG[variant];
 
-  const hasImage =
-    !!node.mediaUrl && node.mediaUrl !== "/media/placeholder.jpg";
+  const hasImage = !!node.mediaUrl && node.mediaUrl !== "/media/placeholder.jpg";
 
   // Truncation
-  const descPreview =
-    node.beschreibung.length > 80
-      ? node.beschreibung.slice(0, 80) + "..."
-      : node.beschreibung;
+  const descPreview = node.beschreibung.length > 80 ? node.beschreibung.slice(0, 80) + "..." : node.beschreibung;
   const canExpand = node.beschreibung.length > 80;
 
   // Animation timing
@@ -154,11 +137,7 @@ export function DiscoveryRevealCard({
       aria-modal="true"
       aria-label={`${config.badgeText}: ${node.titel}`}
       initial={{ opacity: 0 }}
-      animate={
-        exiting
-          ? { opacity: 0, transition: { duration: 0.3 } }
-          : { opacity: 1, transition: { duration: 0.4 } }
-      }
+      animate={exiting ? { opacity: 0, transition: { duration: 0.3 } } : { opacity: 1, transition: { duration: 0.4 } }}
       onAnimationComplete={exiting ? handleAnimationComplete : undefined}
       style={{
         position: "fixed",
@@ -175,9 +154,7 @@ export function DiscoveryRevealCard({
           inset: 0,
           scale: bgScale,
         }}
-        initial={
-          reducedMotion ? {} : { filter: "blur(20px)", scale: 1.1 }
-        }
+        initial={reducedMotion ? {} : { filter: "blur(20px)", scale: 1.1 }}
         animate={
           reducedMotion
             ? {}
@@ -192,13 +169,7 @@ export function DiscoveryRevealCard({
         }
       >
         {hasImage ? (
-          <Image
-            src={node.mediaUrl!}
-            alt=""
-            fill
-            priority
-            style={{ objectFit: "cover" }}
-          />
+          <Image src={node.mediaUrl!} alt="" fill priority style={{ objectFit: "cover" }} />
         ) : (
           <div
             style={{
@@ -244,11 +215,7 @@ export function DiscoveryRevealCard({
           touchAction: "none",
         }}
         animate={
-          exiting === "explore"
-            ? { y: "-100%", opacity: 0 }
-            : exiting === "later"
-              ? { y: "30%", opacity: 0 }
-              : {}
+          exiting === "explore" ? { y: "-100%", opacity: 0 } : exiting === "later" ? { y: "30%", opacity: 0 } : {}
         }
         transition={exiting ? { duration: 0.3, ease: "easeIn" } : undefined}
       >
@@ -390,12 +357,7 @@ export function DiscoveryRevealCard({
               marginTop: 8,
             }}
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M12 4l-6 6h12l-6-6z" fill="white" />
             </svg>
             Nach oben wischen / Enter

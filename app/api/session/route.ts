@@ -10,9 +10,11 @@ export async function GET() {
   });
 
   // Fallback: most recent archived
-  const resolved = session ?? await prisma.votingSession.findFirst({
-    orderBy: { updatedAt: "desc" },
-  });
+  const resolved =
+    session ??
+    (await prisma.votingSession.findFirst({
+      orderBy: { updatedAt: "desc" },
+    }));
 
   if (!resolved) {
     return NextResponse.json({ session: null });

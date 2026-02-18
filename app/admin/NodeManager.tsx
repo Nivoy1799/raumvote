@@ -56,8 +56,7 @@ type TreeViewNode = TreeNodeFlat & { children: TreeViewNode[] };
 
 function sideBadge(side: string | null): React.ReactNode {
   const label = side === "left" ? "L" : side === "right" ? "R" : "\u25CF";
-  const style =
-    side === "left" ? ns.sideBadgeLeft : side === "right" ? ns.sideBadgeRight : ns.sideBadgeRoot;
+  const style = side === "left" ? ns.sideBadgeLeft : side === "right" ? ns.sideBadgeRight : ns.sideBadgeRoot;
   return <span style={{ ...ns.badge, ...style }}>{label}</span>;
 }
 
@@ -125,7 +124,13 @@ function buildTree(nodes: TreeNodeFlat[], rootId: string | null): TreeViewNode |
 
 function formatDate(d: string | null): string {
   if (!d) return "\u2014";
-  return new Date(d).toLocaleString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(d).toLocaleString("de-CH", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 // ---------- Component ----------
@@ -172,7 +177,9 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
       setDebouncedSearch(search);
       setPage(1);
     }, 300);
-    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+    return () => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+    };
   }, [search]);
 
   // Table data fetching
@@ -195,7 +202,18 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [sessionId, page, pageSize, sort, sortDir, debouncedSearch, filterImageStatus, filterDiscovered, filterGenerated, headers]);
+  }, [
+    sessionId,
+    page,
+    pageSize,
+    sort,
+    sortDir,
+    debouncedSearch,
+    filterImageStatus,
+    filterDiscovered,
+    filterGenerated,
+    headers,
+  ]);
 
   useEffect(() => {
     if (subView === "table") reloadNodes();
@@ -318,8 +336,8 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
 
   const selectedDetail: AdminNode | TreeNodeFlat | null =
     subView === "table"
-      ? nodes.find((n) => n.id === selectedNodeId) ?? null
-      : treeNodes.find((n) => n.id === selectedNodeId) ?? null;
+      ? (nodes.find((n) => n.id === selectedNodeId) ?? null)
+      : (treeNodes.find((n) => n.id === selectedNodeId) ?? null);
 
   // ---------- Tree rendering ----------
 
@@ -353,13 +371,31 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
           {"\u25B6"}
         </span>
         {sideBadge(node.side)}
-        <span style={{ flex: 1, fontWeight: 800, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span
+          style={{
+            flex: 1,
+            fontWeight: 800,
+            fontSize: 12,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
           {node.titel}
         </span>
         {imageStatusDot(node.imageStatus)}
         {discoveryDot(!!node.discovererHash)}
         {node.generated && (
-          <span style={{ fontSize: 9, fontWeight: 900, color: "rgba(168,85,247,0.8)", background: "rgba(168,85,247,0.12)", padding: "1px 4px", borderRadius: 4 }}>
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 900,
+              color: "rgba(168,85,247,0.8)",
+              background: "rgba(168,85,247,0.12)",
+              padding: "1px 4px",
+              borderRadius: 4,
+            }}
+          >
             AI
           </span>
         )}
@@ -389,14 +425,23 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
 
       {/* Sub-tab bar + stats */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        <button onClick={() => setSubView("table")} style={{ ...ns.subTab, ...(subView === "table" ? ns.subTabActive : {}) }}>
+        <button
+          onClick={() => setSubView("table")}
+          style={{ ...ns.subTab, ...(subView === "table" ? ns.subTabActive : {}) }}
+        >
           Tabelle
         </button>
-        <button onClick={() => setSubView("tree")} style={{ ...ns.subTab, ...(subView === "tree" ? ns.subTabActive : {}) }}>
+        <button
+          onClick={() => setSubView("tree")}
+          style={{ ...ns.subTab, ...(subView === "tree" ? ns.subTabActive : {}) }}
+        >
           Baumansicht
         </button>
         <button
-          onClick={() => { if (subView === "table") reloadNodes(); else reloadTree(); }}
+          onClick={() => {
+            if (subView === "table") reloadNodes();
+            else reloadTree();
+          }}
           disabled={loading}
           style={{ ...ns.subTab, opacity: loading ? 0.3 : 0.6 }}
           title="Daten neu laden"
@@ -427,7 +472,14 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
               onChange={(e) => setSearch(e.target.value)}
               style={{ ...ns.filterInput, flex: 1, minWidth: 120 }}
             />
-            <select value={filterImageStatus} onChange={(e) => { setFilterImageStatus(e.target.value); setPage(1); }} style={ns.filterSelect}>
+            <select
+              value={filterImageStatus}
+              onChange={(e) => {
+                setFilterImageStatus(e.target.value);
+                setPage(1);
+              }}
+              style={ns.filterSelect}
+            >
               <option value="">Bild: Alle</option>
               <option value="none">Kein Bild</option>
               <option value="pending">Ausstehend</option>
@@ -435,12 +487,26 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
               <option value="completed">Fertig</option>
               <option value="failed">Fehlgeschlagen</option>
             </select>
-            <select value={filterDiscovered} onChange={(e) => { setFilterDiscovered(e.target.value); setPage(1); }} style={ns.filterSelect}>
+            <select
+              value={filterDiscovered}
+              onChange={(e) => {
+                setFilterDiscovered(e.target.value);
+                setPage(1);
+              }}
+              style={ns.filterSelect}
+            >
               <option value="">Entdeckt: Alle</option>
               <option value="true">Entdeckt</option>
               <option value="false">Unentdeckt</option>
             </select>
-            <select value={filterGenerated} onChange={(e) => { setFilterGenerated(e.target.value); setPage(1); }} style={ns.filterSelect}>
+            <select
+              value={filterGenerated}
+              onChange={(e) => {
+                setFilterGenerated(e.target.value);
+                setPage(1);
+              }}
+              style={ns.filterSelect}
+            >
               <option value="">Typ: Alle</option>
               <option value="true">AI-generiert</option>
               <option value="false">Manuell</option>
@@ -451,11 +517,7 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
           {selectedNodes.size > 0 && (
             <div style={ns.bulkToolbar}>
               <span>{selectedNodes.size} ausgewahlt</span>
-              <button
-                style={ns.bulkBtn}
-                disabled={actionLoading}
-                onClick={regenerateImagesBulk}
-              >
+              <button style={ns.bulkBtn} disabled={actionLoading} onClick={regenerateImagesBulk}>
                 Bilder neu generieren
               </button>
               <button style={ns.bulkBtn} onClick={() => setSelectedNodes(new Set())}>
@@ -470,13 +532,30 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
               {selectedNodes.size === nodes.length && nodes.length > 0 ? "\u2611" : "\u2610"}
             </span>
             <span style={{ width: 70 }}>ID</span>
-            <span style={{ flex: 1, cursor: "pointer" }} onClick={() => toggleSort("titel")}>Titel{sortArrow("titel")}</span>
-            <span style={{ width: 44, cursor: "pointer", textAlign: "center" }} onClick={() => toggleSort("depth")}>Tiefe{sortArrow("depth")}</span>
-            <span style={{ width: 40, cursor: "pointer", textAlign: "center" }} onClick={() => toggleSort("side")}>Seite{sortArrow("side")}</span>
-            <span style={{ width: 60, cursor: "pointer", textAlign: "right" }} onClick={() => toggleSort("amountVisits")}>Bes.{sortArrow("amountVisits")}</span>
-            <span style={{ width: 28, textAlign: "center" }} title="Bild-Status">Bild</span>
-            <span style={{ width: 28, textAlign: "center" }} title="Entdeckt">Ent.</span>
-            <span style={{ width: 28, textAlign: "center" }} title="AI-generiert">AI</span>
+            <span style={{ flex: 1, cursor: "pointer" }} onClick={() => toggleSort("titel")}>
+              Titel{sortArrow("titel")}
+            </span>
+            <span style={{ width: 44, cursor: "pointer", textAlign: "center" }} onClick={() => toggleSort("depth")}>
+              Tiefe{sortArrow("depth")}
+            </span>
+            <span style={{ width: 40, cursor: "pointer", textAlign: "center" }} onClick={() => toggleSort("side")}>
+              Seite{sortArrow("side")}
+            </span>
+            <span
+              style={{ width: 60, cursor: "pointer", textAlign: "right" }}
+              onClick={() => toggleSort("amountVisits")}
+            >
+              Bes.{sortArrow("amountVisits")}
+            </span>
+            <span style={{ width: 28, textAlign: "center" }} title="Bild-Status">
+              Bild
+            </span>
+            <span style={{ width: 28, textAlign: "center" }} title="Entdeckt">
+              Ent.
+            </span>
+            <span style={{ width: 28, textAlign: "center" }} title="AI-generiert">
+              AI
+            </span>
             <span style={{ width: 80 }}>Aktionen</span>
           </div>
 
@@ -489,64 +568,91 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
           )}
 
           <div style={{ display: "grid", gap: 4 }}>
-            {!loading && nodes.map((node) => {
-              const imgStatus = getImageStatus(node, placeholderUrl);
-              const isSelected = selectedNodeId === node.id;
-              return (
-                <div
-                  key={node.id}
-                  onClick={() => setSelectedNodeId(node.id === selectedNodeId ? null : node.id)}
-                  style={{
-                    ...ns.nodeRow,
-                    ...(isSelected ? ns.nodeRowSelected : {}),
-                  }}
-                >
-                  <span
-                    style={{ width: 28, textAlign: "center", cursor: "pointer" }}
-                    onClick={(e) => { e.stopPropagation(); toggleSelectNode(node.id); }}
+            {!loading &&
+              nodes.map((node) => {
+                const imgStatus = getImageStatus(node, placeholderUrl);
+                const isSelected = selectedNodeId === node.id;
+                return (
+                  <div
+                    key={node.id}
+                    onClick={() => setSelectedNodeId(node.id === selectedNodeId ? null : node.id)}
+                    style={{
+                      ...ns.nodeRow,
+                      ...(isSelected ? ns.nodeRowSelected : {}),
+                    }}
                   >
-                    {selectedNodes.has(node.id) ? "\u2611" : "\u2610"}
-                  </span>
-                  <span style={{ width: 70, fontFamily: "monospace", fontSize: 10, opacity: 0.5 }}>
-                    {node.id.slice(0, 8)}
-                  </span>
-                  <span style={{ flex: 1, fontWeight: 800, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {node.titel}
-                  </span>
-                  <span style={{ width: 44, textAlign: "center", fontSize: 11, opacity: 0.6 }}>{node.depth}</span>
-                  <span style={{ width: 40, textAlign: "center" }}>{sideBadge(node.side)}</span>
-                  <span style={{ width: 60, textAlign: "right", fontSize: 11, opacity: 0.6 }}>{node.amountVisits}</span>
-                  <span style={{ width: 28, textAlign: "center" }}>{imageStatusDot(imgStatus)}</span>
-                  <span style={{ width: 28, textAlign: "center" }}>{discoveryDot(!!node.discovererHash)}</span>
-                  <span style={{ width: 28, textAlign: "center" }}>
-                    {node.generated && (
-                      <span style={{ fontSize: 9, fontWeight: 900, color: "rgba(168,85,247,0.8)", background: "rgba(168,85,247,0.12)", padding: "1px 4px", borderRadius: 4 }}>
-                        AI
-                      </span>
-                    )}
-                  </span>
-                  <span style={{ width: 80, display: "flex", gap: 4 }}>
-                    <button
-                      style={ns.actionBtn}
-                      title="Bild neu generieren"
-                      disabled={actionLoading}
-                      onClick={(e) => { e.stopPropagation(); regenerateImage(node.id); }}
+                    <span
+                      style={{ width: 28, textAlign: "center", cursor: "pointer" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSelectNode(node.id);
+                      }}
                     >
-                      Img
-                    </button>
-                    <a
-                      href={`/n/${node.id}`}
-                      target="_blank"
-                      rel="noopener"
-                      style={{ ...ns.actionBtn, textDecoration: "none" }}
-                      onClick={(e) => e.stopPropagation()}
+                      {selectedNodes.has(node.id) ? "\u2611" : "\u2610"}
+                    </span>
+                    <span style={{ width: 70, fontFamily: "monospace", fontSize: 10, opacity: 0.5 }}>
+                      {node.id.slice(0, 8)}
+                    </span>
+                    <span
+                      style={{
+                        flex: 1,
+                        fontWeight: 800,
+                        fontSize: 12,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
                     >
-                      {"\u2197"}
-                    </a>
-                  </span>
-                </div>
-              );
-            })}
+                      {node.titel}
+                    </span>
+                    <span style={{ width: 44, textAlign: "center", fontSize: 11, opacity: 0.6 }}>{node.depth}</span>
+                    <span style={{ width: 40, textAlign: "center" }}>{sideBadge(node.side)}</span>
+                    <span style={{ width: 60, textAlign: "right", fontSize: 11, opacity: 0.6 }}>
+                      {node.amountVisits}
+                    </span>
+                    <span style={{ width: 28, textAlign: "center" }}>{imageStatusDot(imgStatus)}</span>
+                    <span style={{ width: 28, textAlign: "center" }}>{discoveryDot(!!node.discovererHash)}</span>
+                    <span style={{ width: 28, textAlign: "center" }}>
+                      {node.generated && (
+                        <span
+                          style={{
+                            fontSize: 9,
+                            fontWeight: 900,
+                            color: "rgba(168,85,247,0.8)",
+                            background: "rgba(168,85,247,0.12)",
+                            padding: "1px 4px",
+                            borderRadius: 4,
+                          }}
+                        >
+                          AI
+                        </span>
+                      )}
+                    </span>
+                    <span style={{ width: 80, display: "flex", gap: 4 }}>
+                      <button
+                        style={ns.actionBtn}
+                        title="Bild neu generieren"
+                        disabled={actionLoading}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          regenerateImage(node.id);
+                        }}
+                      >
+                        Img
+                      </button>
+                      <a
+                        href={`/n/${node.id}`}
+                        target="_blank"
+                        rel="noopener"
+                        style={{ ...ns.actionBtn, textDecoration: "none" }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {"\u2197"}
+                      </a>
+                    </span>
+                  </div>
+                );
+              })}
           </div>
 
           {/* Pagination */}
@@ -559,7 +665,9 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
               >
                 {"\u2190"}
               </button>
-              <span style={{ fontSize: 12, opacity: 0.7 }}>{page} / {totalPages}</span>
+              <span style={{ fontSize: 12, opacity: 0.7 }}>
+                {page} / {totalPages}
+              </span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
@@ -576,8 +684,12 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
       {subView === "tree" && (
         <>
           <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-            <button style={ns.tinyBtn} onClick={expandAll}>Alle aufklappen</button>
-            <button style={ns.tinyBtn} onClick={collapseAll}>Alle zuklappen</button>
+            <button style={ns.tinyBtn} onClick={expandAll}>
+              Alle aufklappen
+            </button>
+            <button style={ns.tinyBtn} onClick={collapseAll}>
+              Alle zuklappen
+            </button>
           </div>
 
           {loading && <div style={{ padding: 12, opacity: 0.5, fontSize: 12 }}>Laden...</div>}
@@ -586,11 +698,12 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
             <div style={{ padding: 12, opacity: 0.5, fontSize: 12 }}>Keine Nodes vorhanden.</div>
           )}
 
-          {!loading && (() => {
-            const tree = buildTree(treeNodes, rootNodeId);
-            if (!tree) return null;
-            return <div style={ns.treeContainer}>{renderTreeNode(tree)}</div>;
-          })()}
+          {!loading &&
+            (() => {
+              const tree = buildTree(treeNodes, rootNodeId);
+              if (!tree) return null;
+              return <div style={ns.treeContainer}>{renderTreeNode(tree)}</div>;
+            })()}
         </>
       )}
 
@@ -599,12 +712,15 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
         <div style={ns.detailPanel}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ fontSize: 14, fontWeight: 900 }}>{selectedDetail.titel}</div>
-            <button onClick={() => setSelectedNodeId(null)} style={ns.tinyBtn}>Schliessen</button>
+            <button onClick={() => setSelectedNodeId(null)} style={ns.tinyBtn}>
+              Schliessen
+            </button>
           </div>
 
           <div style={{ display: "flex", gap: 14 }}>
             {/* Image thumbnail */}
             {selectedDetail.mediaUrl && selectedDetail.mediaUrl !== placeholderUrl && (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={selectedDetail.mediaUrl}
                 alt=""
@@ -638,7 +754,9 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
               <span>{selectedDetail.depth}</span>
 
               <span style={ns.detailLabel}>Seite</span>
-              <span>{selectedDetail.side === "left" ? "Links" : selectedDetail.side === "right" ? "Rechts" : "Root"}</span>
+              <span>
+                {selectedDetail.side === "left" ? "Links" : selectedDetail.side === "right" ? "Rechts" : "Root"}
+              </span>
 
               <span style={ns.detailLabel}>Besuche</span>
               <span>{selectedDetail.amountVisits}</span>
@@ -670,11 +788,7 @@ export function NodeManager({ sessionId, placeholderUrl, headers }: Props) {
 
           {/* Actions */}
           <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
-            <button
-              style={ns.detailBtn}
-              disabled={actionLoading}
-              onClick={() => regenerateImage(selectedDetail.id)}
-            >
+            <button style={ns.detailBtn} disabled={actionLoading} onClick={() => regenerateImage(selectedDetail.id)}>
               Bild neu generieren
             </button>
             <a

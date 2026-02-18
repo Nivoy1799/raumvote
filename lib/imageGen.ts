@@ -46,11 +46,7 @@ export async function generateNodeImage(
 
 // --- Gemini provider ---
 
-async function generateWithGemini(
-  prompt: string,
-  nodeId: string,
-  config: ImageGenConfig,
-): Promise<string | null> {
+async function generateWithGemini(prompt: string, nodeId: string, config: ImageGenConfig): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.error("[imageGen] GEMINI_API_KEY not set");
@@ -118,11 +114,7 @@ async function generateWithGemini(
 
 // --- HuggingFace fallback provider ---
 
-async function generateWithHuggingFace(
-  prompt: string,
-  nodeId: string,
-  model: string,
-): Promise<string | null> {
+async function generateWithHuggingFace(prompt: string, nodeId: string, model: string): Promise<string | null> {
   const apiKey = process.env.HUGGINGFACE_API_KEY;
   if (!apiKey) {
     console.error("[imageGen] HUGGINGFACE_API_KEY not set");
@@ -155,13 +147,9 @@ async function generateWithHuggingFace(
 
 // --- Helpers ---
 
-type GeminiPart =
-  | { text: string }
-  | { inlineData: { mimeType: string; data: string } };
+type GeminiPart = { text: string } | { inlineData: { mimeType: string; data: string } };
 
-async function fetchReferenceImages(
-  urls: string[],
-): Promise<{ mimeType: string; base64: string }[]> {
+async function fetchReferenceImages(urls: string[]): Promise<{ mimeType: string; base64: string }[]> {
   const results: { mimeType: string; base64: string }[] = [];
   for (const url of urls) {
     try {

@@ -44,7 +44,7 @@ export default function DeniedPage() {
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 250, height: 250 } },
         (decodedText) => handleResult(decodedText),
-        () => {} // ignore scan failures
+        () => {}, // ignore scan failures
       );
     } catch (err) {
       setError("Kamera konnte nicht geöffnet werden. Bitte Berechtigung erteilen oder ein Bild hochladen.");
@@ -121,7 +121,17 @@ export default function DeniedPage() {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  shell: { position: "fixed", inset: 0, background: "black", color: "white", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1, overflow: "auto" },
+  shell: {
+    position: "fixed",
+    inset: 0,
+    background: "black",
+    color: "white",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
+    overflow: "auto",
+  },
   center: { textAlign: "center", padding: 24, width: "100%", maxWidth: 400 },
   title: { fontSize: 22, fontWeight: 950, letterSpacing: -0.3 },
   sub: { fontSize: 14, opacity: 0.7, marginTop: 10, lineHeight: 1.4 },

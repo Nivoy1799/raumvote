@@ -23,13 +23,9 @@ function fmtRemaining(ms: number): string {
   return `${mins}m`;
 }
 
-export const SessionTimeline = memo(function SessionTimeline({
-  session,
-}: {
-  session: SessionInfo | null;
-}) {
+export const SessionTimeline = memo(function SessionTimeline({ session }: { session: SessionInfo | null }) {
   const r = useResponsive();
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 60_000);
@@ -40,7 +36,16 @@ export const SessionTimeline = memo(function SessionTimeline({
 
   if (!session) {
     return (
-      <section style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)", borderRadius: r.borderRadius.medium, padding: r.spacing.medium, backdropFilter: "blur(14px)", marginBottom: r.spacing.medium }}>
+      <section
+        style={{
+          border: "1px solid rgba(255,255,255,0.10)",
+          background: "rgba(255,255,255,0.04)",
+          borderRadius: r.borderRadius.medium,
+          padding: r.spacing.medium,
+          backdropFilter: "blur(14px)",
+          marginBottom: r.spacing.medium,
+        }}
+      >
         <div style={{ fontSize: r.fontSize.body, fontWeight: 900, marginBottom: 4 }}>Abstimmungs-Zeitraum</div>
         <div style={{ opacity: 0.65, fontSize: r.fontSize.small, lineHeight: 1.35 }}>Noch keine aktive Abstimmung.</div>
       </section>
@@ -75,30 +80,70 @@ export const SessionTimeline = memo(function SessionTimeline({
   }
 
   return (
-    <section style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)", borderRadius: r.borderRadius.medium, padding: r.spacing.medium, backdropFilter: "blur(14px)", marginBottom: r.spacing.medium }}>
+    <section
+      style={{
+        border: "1px solid rgba(255,255,255,0.10)",
+        background: "rgba(255,255,255,0.04)",
+        borderRadius: r.borderRadius.medium,
+        padding: r.spacing.medium,
+        backdropFilter: "blur(14px)",
+        marginBottom: r.spacing.medium,
+      }}
+    >
       <div style={{ fontSize: r.fontSize.body, fontWeight: 900, marginBottom: 4 }}>Abstimmungs-Zeitraum</div>
-      {session.title && <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginBottom: r.spacing.small + 2 }}>{session.title}</div>}
+      {session.title && (
+        <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginBottom: r.spacing.small + 2 }}>
+          {session.title}
+        </div>
+      )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: r.spacing.small + 2 }}>
-        <span style={{ fontSize: r.fontSize.small - 1, fontWeight: 900, padding: "3px 10px", borderRadius: 8, border: "1px solid", background: statusColor + "22", color: statusColor, borderColor: statusColor + "44" }}>
+        <span
+          style={{
+            fontSize: r.fontSize.small - 1,
+            fontWeight: 900,
+            padding: "3px 10px",
+            borderRadius: 8,
+            border: "1px solid",
+            background: statusColor + "22",
+            color: statusColor,
+            borderColor: statusColor + "44",
+          }}
+        >
           {statusLabel}
         </span>
         {session.status === "active" && remaining > 0 && (
-          <span style={{ fontSize: r.fontSize.small, fontWeight: 800, opacity: 0.8 }}>noch {fmtRemaining(remaining)}</span>
+          <span style={{ fontSize: r.fontSize.small, fontWeight: 800, opacity: 0.8 }}>
+            noch {fmtRemaining(remaining)}
+          </span>
         )}
       </div>
 
       <div style={{ height: trackH, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-        <div style={{ height: trackH, borderRadius: 999, transition: "width 0.5s ease", width: `${pct}%`, background: statusColor }} />
+        <div
+          style={{
+            height: trackH,
+            borderRadius: 999,
+            transition: "width 0.5s ease",
+            width: `${pct}%`,
+            background: statusColor,
+          }}
+        />
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-        <span style={{ fontSize: r.fontSize.small - 1, opacity: 0.55, fontWeight: 700 }}>{fmtDate(session.startedAt)}</span>
-        <span style={{ fontSize: r.fontSize.small - 1, opacity: 0.55, fontWeight: 700 }}>{fmtDate(session.deadline)}</span>
+        <span style={{ fontSize: r.fontSize.small - 1, opacity: 0.55, fontWeight: 700 }}>
+          {fmtDate(session.startedAt)}
+        </span>
+        <span style={{ fontSize: r.fontSize.small - 1, opacity: 0.55, fontWeight: 700 }}>
+          {fmtDate(session.deadline)}
+        </span>
       </div>
 
       <div style={{ marginTop: r.spacing.small }}>
-        <span style={{ opacity: 0.65, fontSize: r.fontSize.small, lineHeight: 1.35 }}>{session.durationDays} Tage Abstimmungsdauer</span>
+        <span style={{ opacity: 0.65, fontSize: r.fontSize.small, lineHeight: 1.35 }}>
+          {session.durationDays} Tage Abstimmungsdauer
+        </span>
       </div>
     </section>
   );

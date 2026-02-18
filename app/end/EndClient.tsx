@@ -34,24 +34,15 @@ export default function EndClient() {
         </div>
 
         <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
-          <button
-            onClick={() => router.push("/start")}
-            style={btnPrimary}
-          >
+          <button onClick={() => router.push("/start")} style={btnPrimary}>
             Restart
           </button>
 
-          <button
-            onClick={share}
-            style={btnGhost}
-          >
+          <button onClick={share} style={btnGhost}>
             Share
           </button>
 
-          <button
-            onClick={() => router.push("/dream")}
-            style={btnGhost}
-          >
+          <button onClick={() => router.push("/dream")} style={btnGhost}>
             Go to Dream
           </button>
         </div>

@@ -27,13 +27,20 @@ const RESPONSE_SCHEMA = {
   schema: {
     type: "object",
     properties: {
-      question: { type: "string", description: "Reflective question revealing what the user did NOT choose and what the alternative path represents." },
+      question: {
+        type: "string",
+        description:
+          "Reflective question revealing what the user did NOT choose and what the alternative path represents.",
+      },
       left: {
         type: "object",
         properties: {
           titel: { type: "string", description: "Max 2 words." },
           beschreibung: { type: "string", description: "Max 4 keywords." },
-          context: { type: "string", description: "Free-form scene description: atmosphere, persona situation, spatial setting, emotional tone." },
+          context: {
+            type: "string",
+            description: "Free-form scene description: atmosphere, persona situation, spatial setting, emotional tone.",
+          },
         },
         required: ["titel", "beschreibung", "context"],
         additionalProperties: false,
@@ -43,7 +50,10 @@ const RESPONSE_SCHEMA = {
         properties: {
           titel: { type: "string", description: "Max 2 words." },
           beschreibung: { type: "string", description: "Max 4 keywords." },
-          context: { type: "string", description: "Free-form scene description: atmosphere, persona situation, spatial setting, emotional tone." },
+          context: {
+            type: "string",
+            description: "Free-form scene description: atmosphere, persona situation, spatial setting, emotional tone.",
+          },
         },
         required: ["titel", "beschreibung", "context"],
         additionalProperties: false,

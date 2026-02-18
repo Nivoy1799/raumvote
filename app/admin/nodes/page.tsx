@@ -8,14 +8,12 @@ export default function NodesPage() {
   const { currentSession, headers } = useAdmin();
 
   if (!currentSession) {
-    return <section style={s.card}><div style={s.muted}>Zuerst eine Session erstellen.</div></section>;
+    return (
+      <section style={s.card}>
+        <div style={s.muted}>Zuerst eine Session erstellen.</div>
+      </section>
+    );
   }
 
-  return (
-    <NodeManager
-      sessionId={currentSession.id}
-      placeholderUrl={currentSession.placeholderUrl}
-      headers={headers}
-    />
-  );
+  return <NodeManager sessionId={currentSession.id} placeholderUrl={currentSession.placeholderUrl} headers={headers} />;
 }

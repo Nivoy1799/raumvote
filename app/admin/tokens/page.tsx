@@ -20,15 +20,23 @@ export default function TokensPage() {
   async function createTokens() {
     setLoading(true);
     const res = await fetch("/api/admin/tokens", {
-      method: "POST", headers: headers(),
+      method: "POST",
+      headers: headers(),
       body: JSON.stringify({ count: createCount, label: createLabel || null }),
     });
-    if (res.ok) { setCreateLabel(""); await reloadTokens(); }
+    if (res.ok) {
+      setCreateLabel("");
+      await reloadTokens();
+    }
     setLoading(false);
   }
 
   async function toggleActive(t: { id: string; active: boolean }) {
-    await fetch("/api/admin/tokens", { method: "PATCH", headers: headers(), body: JSON.stringify({ id: t.id, active: !t.active }) });
+    await fetch("/api/admin/tokens", {
+      method: "PATCH",
+      headers: headers(),
+      body: JSON.stringify({ id: t.id, active: !t.active }),
+    });
     await reloadTokens();
   }
 
@@ -62,14 +70,22 @@ export default function TokensPage() {
     document.body.appendChild(iframe);
 
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!iframeDoc) { document.body.removeChild(iframe); return; }
+    if (!iframeDoc) {
+      document.body.removeChild(iframe);
+      return;
+    }
     iframeDoc.open();
     iframeDoc.write(html);
     iframeDoc.close();
 
     await new Promise((r) => setTimeout(r, 300));
 
-    const canvas = await html2canvas(iframeDoc.body, { scale: 2, width: 794, windowWidth: 794, backgroundColor: "#ffffff" });
+    const canvas = await html2canvas(iframeDoc.body, {
+      scale: 2,
+      width: 794,
+      windowWidth: 794,
+      backgroundColor: "#ffffff",
+    });
     document.body.removeChild(iframe);
 
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -106,7 +122,12 @@ export default function TokensPage() {
   }
 
   const filtered = tokens.filter((t) => {
-    if (tokenFilterLabel && !(t.label || "").toLowerCase().includes(tokenFilterLabel.toLowerCase()) && !t.token.toLowerCase().includes(tokenFilterLabel.toLowerCase())) return false;
+    if (
+      tokenFilterLabel &&
+      !(t.label || "").toLowerCase().includes(tokenFilterLabel.toLowerCase()) &&
+      !t.token.toLowerCase().includes(tokenFilterLabel.toLowerCase())
+    )
+      return false;
     if (tokenFilterStatus === "active" && !t.active) return false;
     if (tokenFilterStatus === "inactive" && t.active) return false;
     return true;
@@ -117,27 +138,66 @@ export default function TokensPage() {
   return (
     <>
       <div style={{ ...s.h1, fontSize: 18, marginTop: 8 }}>Token-Verwaltung</div>
-      <div style={s.sub}>{tokens.length} Tokens gesamt, {tokens.filter((t) => t.active).length} aktiv</div>
+      <div style={s.sub}>
+        {tokens.length} Tokens gesamt, {tokens.filter((t) => t.active).length} aktiv
+      </div>
 
       <section style={s.card}>
         <div style={s.cardTitle}>Neue Tokens erstellen</div>
         <div style={s.row}>
-          <input type="number" min={1} max={100} value={createCount} onChange={(e) => setCreateCount(Math.max(1, Number(e.target.value)))} style={{ ...s.input, width: 70 }} />
-          <input value={createLabel} onChange={(e) => setCreateLabel(e.target.value)} placeholder="Label (optional)" style={{ ...s.input, flex: 1 }} />
-          <button style={s.btn} onClick={createTokens} disabled={loading}>Erstellen</button>
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={createCount}
+            onChange={(e) => setCreateCount(Math.max(1, Number(e.target.value)))}
+            style={{ ...s.input, width: 70 }}
+          />
+          <input
+            value={createLabel}
+            onChange={(e) => setCreateLabel(e.target.value)}
+            placeholder="Label (optional)"
+            style={{ ...s.input, flex: 1 }}
+          />
+          <button style={s.btn} onClick={createTokens} disabled={loading}>
+            Erstellen
+          </button>
         </div>
       </section>
 
       <div style={s.row}>
-        <button style={s.btnSmall} onClick={reloadTokens} disabled={loading}>Aktualisieren</button>
-        <button style={s.btnSmall} onClick={downloadAllQR} disabled={loading || tokens.filter((t) => t.active).length === 0}>Alle Anleitungen herunterladen</button>
+        <button style={s.btnSmall} onClick={reloadTokens} disabled={loading}>
+          Aktualisieren
+        </button>
+        <button
+          style={s.btnSmall}
+          onClick={downloadAllQR}
+          disabled={loading || tokens.filter((t) => t.active).length === 0}
+        >
+          Alle Anleitungen herunterladen
+        </button>
       </div>
 
       <section style={s.card}>
         <div style={s.cardTitle}>Tokens</div>
         <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <input value={tokenFilterLabel} onChange={(e) => { setTokenFilterLabel(e.target.value); setTokenPage(1); }} placeholder="Label suchen..." style={{ ...s.input, fontSize: 12, padding: "6px 10px", flex: 1, minWidth: 120 }} />
-          <select value={tokenFilterStatus} onChange={(e) => { setTokenFilterStatus(e.target.value as "" | "active" | "inactive"); setTokenPage(1); }} style={{ ...s.input, fontSize: 12, padding: "6px 10px", cursor: "pointer" }}>
+          <input
+            value={tokenFilterLabel}
+            onChange={(e) => {
+              setTokenFilterLabel(e.target.value);
+              setTokenPage(1);
+            }}
+            placeholder="Label suchen..."
+            style={{ ...s.input, fontSize: 12, padding: "6px 10px", flex: 1, minWidth: 120 }}
+          />
+          <select
+            value={tokenFilterStatus}
+            onChange={(e) => {
+              setTokenFilterStatus(e.target.value as "" | "active" | "inactive");
+              setTokenPage(1);
+            }}
+            style={{ ...s.input, fontSize: 12, padding: "6px 10px", cursor: "pointer" }}
+          >
             <option value="">Alle</option>
             <option value="active">Aktiv</option>
             <option value="inactive">Gesperrt</option>
@@ -154,23 +214,61 @@ export default function TokensPage() {
                 <div key={t.id} style={{ ...s.tokenRow, opacity: t.active ? 1 : 0.5 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={s.tokenLabel}>{t.label || "\u2014"}</div>
-                    <div style={s.tokenCode}>{t.token.slice(0, 8)}...{t.token.slice(-6)}</div>
-                    <div style={s.tokenMeta}>{t.active ? "Aktiv" : "Gesperrt"} &middot; {new Date(t.createdAt).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" })}</div>
+                    <div style={s.tokenCode}>
+                      {t.token.slice(0, 8)}...{t.token.slice(-6)}
+                    </div>
+                    <div style={s.tokenMeta}>
+                      {t.active ? "Aktiv" : "Gesperrt"} &middot;{" "}
+                      {new Date(t.createdAt).toLocaleDateString("de-CH", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
+                    </div>
                   </div>
                   <div style={s.tokenActions}>
-                    <button style={s.btnTiny} onClick={() => copyUrl(t.token)} title="URL kopieren">Link</button>
-                    <button style={s.btnTiny} onClick={() => downloadAnleitung(t)} title="Anleitung mit QR herunterladen">PDF</button>
-                    <button style={{ ...s.btnTiny, background: t.active ? "rgba(255,59,92,0.2)" : "rgba(96,165,250,0.2)" }} onClick={() => toggleActive(t)}>{t.active ? "Sperren" : "Aktivieren"}</button>
-                    <button style={{ ...s.btnTiny, background: "rgba(255,59,92,0.3)" }} onClick={() => deleteToken(t)}>X</button>
+                    <button style={s.btnTiny} onClick={() => copyUrl(t.token)} title="URL kopieren">
+                      Link
+                    </button>
+                    <button
+                      style={s.btnTiny}
+                      onClick={() => downloadAnleitung(t)}
+                      title="Anleitung mit QR herunterladen"
+                    >
+                      PDF
+                    </button>
+                    <button
+                      style={{ ...s.btnTiny, background: t.active ? "rgba(255,59,92,0.2)" : "rgba(96,165,250,0.2)" }}
+                      onClick={() => toggleActive(t)}
+                    >
+                      {t.active ? "Sperren" : "Aktivieren"}
+                    </button>
+                    <button style={{ ...s.btnTiny, background: "rgba(255,59,92,0.3)" }} onClick={() => deleteToken(t)}>
+                      X
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
             {totalPages > 1 && (
               <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center", marginTop: 10 }}>
-                <button onClick={() => setTokenPage((p) => Math.max(1, p - 1))} disabled={tokenPage <= 1} style={{ ...s.btnTiny, opacity: tokenPage <= 1 ? 0.3 : 1 }}>&larr;</button>
-                <span style={{ fontSize: 12, opacity: 0.7 }}>{tokenPage} / {totalPages}</span>
-                <button onClick={() => setTokenPage((p) => Math.min(totalPages, p + 1))} disabled={tokenPage >= totalPages} style={{ ...s.btnTiny, opacity: tokenPage >= totalPages ? 0.3 : 1 }}>&rarr;</button>
+                <button
+                  onClick={() => setTokenPage((p) => Math.max(1, p - 1))}
+                  disabled={tokenPage <= 1}
+                  style={{ ...s.btnTiny, opacity: tokenPage <= 1 ? 0.3 : 1 }}
+                >
+                  &larr;
+                </button>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>
+                  {tokenPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setTokenPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={tokenPage >= totalPages}
+                  style={{ ...s.btnTiny, opacity: tokenPage >= totalPages ? 0.3 : 1 }}
+                >
+                  &rarr;
+                </button>
               </div>
             )}
           </>

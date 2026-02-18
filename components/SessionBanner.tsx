@@ -18,7 +18,7 @@ const DISMISS_KEY = "session-banner-dismissed";
 
 export function SessionBanner({ session }: { session: SessionInfo | null }) {
   const r = useResponsive();
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const [dismissed, setDismissed] = useState(true); // start hidden to avoid flash
 
   // Restore dismissed state from sessionStorage
@@ -26,9 +26,9 @@ export function SessionBanner({ session }: { session: SessionInfo | null }) {
     const stored = sessionStorage.getItem(DISMISS_KEY);
     if (stored && session) {
       // Only stay dismissed if same session id
-      setDismissed(stored === session.id);
+      queueMicrotask(() => setDismissed(stored === session.id));
     } else {
-      setDismissed(false);
+      queueMicrotask(() => setDismissed(false));
     }
   }, [session]);
 
@@ -65,26 +65,44 @@ export function SessionBanner({ session }: { session: SessionInfo | null }) {
   }
 
   return (
-    <div style={{
-      position: "fixed",
-      left: r.spacing.medium + 4,
-      right: r.spacing.medium + 4,
-      bottom: r.tabbarHeight + r.spacing.medium + r.spacing.small,
-      maxWidth: r.breakpoint === "large" ? 800 : 520,
-      margin: "0 auto",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 10,
-      padding: `${r.spacing.small}px ${r.spacing.medium}px`,
-      borderRadius: r.borderRadius.small,
-      border: "1px solid rgba(255,255,255,0.12)",
-      backdropFilter: "blur(16px)",
-      zIndex: 99,
-      background: accent,
-    }}>
-      <span style={{ fontSize: r.fontSize.small, fontWeight: 800, color: "white", flex: 1, textAlign: "center" as const }}>{label}</span>
-      <button onClick={dismiss} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.6)", fontSize: r.fontSize.body, cursor: "pointer", padding: "0 2px", lineHeight: 1 }} aria-label="Schliessen">
+    <div
+      style={{
+        position: "fixed",
+        left: r.spacing.medium + 4,
+        right: r.spacing.medium + 4,
+        bottom: r.tabbarHeight + r.spacing.medium + r.spacing.small,
+        maxWidth: r.breakpoint === "large" ? 800 : 520,
+        margin: "0 auto",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        padding: `${r.spacing.small}px ${r.spacing.medium}px`,
+        borderRadius: r.borderRadius.small,
+        border: "1px solid rgba(255,255,255,0.12)",
+        backdropFilter: "blur(16px)",
+        zIndex: 99,
+        background: accent,
+      }}
+    >
+      <span
+        style={{ fontSize: r.fontSize.small, fontWeight: 800, color: "white", flex: 1, textAlign: "center" as const }}
+      >
+        {label}
+      </span>
+      <button
+        onClick={dismiss}
+        style={{
+          background: "none",
+          border: "none",
+          color: "rgba(255,255,255,0.6)",
+          fontSize: r.fontSize.body,
+          cursor: "pointer",
+          padding: "0 2px",
+          lineHeight: 1,
+        }}
+        aria-label="Schliessen"
+      >
         ✕
       </button>
     </div>

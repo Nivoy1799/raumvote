@@ -2,12 +2,8 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faHouse,
-  faChartSimple,
-  faWandSparkles,
-  faUser,
-} from "@fortawesome/free-solid-svg-icons";
+import { faHouse, faChartSimple, faWandSparkles, faUser } from "@fortawesome/free-solid-svg-icons";
+import type { IconDefinition } from "@fortawesome/free-solid-svg-icons";
 import { useResponsive } from "@/lib/useResponsive";
 
 export default function GlobalTabbar() {
@@ -46,16 +42,46 @@ export default function GlobalTabbar() {
   return (
     <div style={blocker}>
       <footer style={{ ...tabbar, pointerEvents: "auto" }}>
-        <Tab icon={faHouse} active={pathname.startsWith("/start")} onClick={() => router.push("/start")} iconSize={r.fontSize.button + 4} />
-        <Tab icon={faChartSimple} active={pathname.startsWith("/results")} onClick={() => router.push("/results")} iconSize={r.fontSize.button + 4} />
-        <Tab icon={faWandSparkles} active={pathname.startsWith("/dream")} onClick={() => router.push("/dream")} iconSize={r.fontSize.button + 4} />
-        <Tab icon={faUser} active={pathname.startsWith("/me")} onClick={() => router.push("/me")} iconSize={r.fontSize.button + 4} />
+        <Tab
+          icon={faHouse}
+          active={pathname.startsWith("/start")}
+          onClick={() => router.push("/start")}
+          iconSize={r.fontSize.button + 4}
+        />
+        <Tab
+          icon={faChartSimple}
+          active={pathname.startsWith("/results")}
+          onClick={() => router.push("/results")}
+          iconSize={r.fontSize.button + 4}
+        />
+        <Tab
+          icon={faWandSparkles}
+          active={pathname.startsWith("/dream")}
+          onClick={() => router.push("/dream")}
+          iconSize={r.fontSize.button + 4}
+        />
+        <Tab
+          icon={faUser}
+          active={pathname.startsWith("/me")}
+          onClick={() => router.push("/me")}
+          iconSize={r.fontSize.button + 4}
+        />
       </footer>
     </div>
   );
 }
 
-function Tab({ icon, active, onClick, iconSize }: any) {
+function Tab({
+  icon,
+  active,
+  onClick,
+  iconSize,
+}: {
+  icon: IconDefinition;
+  active: boolean;
+  onClick: () => void;
+  iconSize: number;
+}) {
   return (
     <button onClick={onClick} style={{ ...s.tab, ...(active ? s.active : null) }}>
       <FontAwesomeIcon icon={icon} style={{ fontSize: iconSize }} />

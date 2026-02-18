@@ -34,41 +34,41 @@ Access is controlled via pre-created tokens (UUIDs) stored in the `AccessToken` 
 
 ### Page routes
 
-| Route | Purpose |
-|---|---|
+| Route            | Purpose                                                                       |
+| ---------------- | ----------------------------------------------------------------------------- |
 | `/login/[token]` | QR code landing — validates token, saves to localStorage, redirects to /start |
-| `/denied` | Access denied page — shown when no valid token |
-| `/admin` | Token management (password-gated via ADMIN_SECRET) |
-| `/start` | Redirects to first tree node |
-| `/n/[nodeId]` | Split-screen binary choice (main voting UI) |
-| `/o/[optionId]` | Single option detail view |
-| `/dream` | Shows user's current voted option |
-| `/results` | Leaderboard of vote counts |
-| `/me` | Profile: username, avatar |
+| `/denied`        | Access denied page — shown when no valid token                                |
+| `/admin`         | Token management (password-gated via ADMIN_SECRET)                            |
+| `/start`         | Redirects to first tree node                                                  |
+| `/n/[nodeId]`    | Split-screen binary choice (main voting UI)                                   |
+| `/o/[optionId]`  | Single option detail view                                                     |
+| `/dream`         | Shows user's current voted option                                             |
+| `/results`       | Leaderboard of vote counts                                                    |
+| `/me`            | Profile: username, avatar                                                     |
 
 ### API routes (`app/api/`)
 
 All API routes follow the same pattern: validate params → hash voterId → Prisma query → JSON response. Toggle endpoints (like, vote, comment-like) check for existing record and delete/create accordingly.
 
-| Endpoint | Methods | Notes |
-|---|---|---|
-| `/api/vote` | POST | Upsert vote; re-voting same option unvotes. Params: `{sessionId, optionId, voterId}` |
-| `/api/vote/status` | GET | Check user's current vote. Params: `?sessionId=&voterId=` |
-| `/api/like` | POST | Toggle like on option. Params: `{sessionId, optionId, voterId}` |
-| `/api/like/status` | GET | Check if user liked option. Params: `?sessionId=&optionId=&voterId=` |
-| `/api/like/count` | GET | Like count for option. Params: `?sessionId=&optionId=` |
-| `/api/comment` | GET, POST | List/create comments. Params: `sessionId, optionId, voterId` |
-| `/api/comment/count` | GET | Comment count for option. Params: `?sessionId=&optionId=` |
-| `/api/comment/like` | POST | Toggle like on comment |
-| `/api/me` | GET, POST | User profile (username, avatarUrl) |
-| `/api/results` | GET | Aggregated vote counts. Params: `?sessionId=` |
-| `/api/session` | GET | Active session info (rootNodeId, placeholderUrl, discoveryEnabled) |
-| `/api/auth/validate` | GET | Check if a token is valid and active |
-| `/api/admin/session` | GET, POST, PATCH, DELETE | Session CRUD + tree config (protected by ADMIN_SECRET) |
-| `/api/admin/session/media` | POST, DELETE | Reference media upload/remove for session |
-| `/api/admin/tokens` | GET, POST, PATCH, DELETE | Token CRUD (protected by ADMIN_SECRET header) |
-| `/api/admin/image-tasks` | GET, POST | Image generation task queue. Params: `sessionId` |
-| `/api/admin/tree-reset` | POST | Reset tree for a session (delete all nodes, create new root) |
+| Endpoint                   | Methods                  | Notes                                                                                |
+| -------------------------- | ------------------------ | ------------------------------------------------------------------------------------ |
+| `/api/vote`                | POST                     | Upsert vote; re-voting same option unvotes. Params: `{sessionId, optionId, voterId}` |
+| `/api/vote/status`         | GET                      | Check user's current vote. Params: `?sessionId=&voterId=`                            |
+| `/api/like`                | POST                     | Toggle like on option. Params: `{sessionId, optionId, voterId}`                      |
+| `/api/like/status`         | GET                      | Check if user liked option. Params: `?sessionId=&optionId=&voterId=`                 |
+| `/api/like/count`          | GET                      | Like count for option. Params: `?sessionId=&optionId=`                               |
+| `/api/comment`             | GET, POST                | List/create comments. Params: `sessionId, optionId, voterId`                         |
+| `/api/comment/count`       | GET                      | Comment count for option. Params: `?sessionId=&optionId=`                            |
+| `/api/comment/like`        | POST                     | Toggle like on comment                                                               |
+| `/api/me`                  | GET, POST                | User profile (username, avatarUrl)                                                   |
+| `/api/results`             | GET                      | Aggregated vote counts. Params: `?sessionId=`                                        |
+| `/api/session`             | GET                      | Active session info (rootNodeId, placeholderUrl, discoveryEnabled)                   |
+| `/api/auth/validate`       | GET                      | Check if a token is valid and active                                                 |
+| `/api/admin/session`       | GET, POST, PATCH, DELETE | Session CRUD + tree config (protected by ADMIN_SECRET)                               |
+| `/api/admin/session/media` | POST, DELETE             | Reference media upload/remove for session                                            |
+| `/api/admin/tokens`        | GET, POST, PATCH, DELETE | Token CRUD (protected by ADMIN_SECRET header)                                        |
+| `/api/admin/image-tasks`   | GET, POST                | Image generation task queue. Params: `sessionId`                                     |
+| `/api/admin/tree-reset`    | POST                     | Reset tree for a session (delete all nodes, create new root)                         |
 
 ### Shared components
 

@@ -8,7 +8,7 @@ export type Node = {
     title: string;
     description?: string;
     mediaUrl: string; // image or video url
-    next?: string;    // next node id (optional for MVP)
+    next?: string; // next node id (optional for MVP)
   };
   right: {
     label: string;

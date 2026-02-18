@@ -5,18 +5,15 @@ import { useEffect, useRef, useState } from "react";
 export function useTTS() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [supported, setSupported] = useState(false);
+  const [supported] = useState(() => typeof window !== "undefined" && !!window.speechSynthesis);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // Initialize voice list and check support
   useEffect(() => {
     const synth = window.speechSynthesis;
     if (!synth) {
-      setSupported(false);
       return;
     }
-
-    setSupported(true);
 
     // Load voices
     const loadVoices = () => {

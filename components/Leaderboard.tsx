@@ -13,11 +13,7 @@ type ResultsPayload = {
   leaderboard: LeaderRow[];
 };
 
-export const Leaderboard = memo(function Leaderboard({
-  sessionId,
-}: {
-  sessionId: string;
-}) {
+export const Leaderboard = memo(function Leaderboard({ sessionId }: { sessionId: string }) {
   const router = useRouter();
   const r = useResponsive();
 
@@ -30,10 +26,7 @@ export const Leaderboard = memo(function Leaderboard({
 
     (async () => {
       setLoading(true);
-      const res = await fetch(
-        `/api/results?sessionId=${encodeURIComponent(sessionId)}`,
-        { cache: "no-store" }
-      );
+      const res = await fetch(`/api/results?sessionId=${encodeURIComponent(sessionId)}`, { cache: "no-store" });
       const j = await res.json().catch(() => null);
       setData(j);
       setLoading(false);
@@ -52,11 +45,11 @@ export const Leaderboard = memo(function Leaderboard({
         missing.map(async (id) => {
           try {
             const node = await fetchSingleNode(id);
-            return node ? [id, node] as const : null;
+            return node ? ([id, node] as const) : null;
           } catch {
             return null;
           }
-        })
+        }),
       );
 
       const next: Record<string, TreeNodeData> = {};
@@ -82,33 +75,93 @@ export const Leaderboard = memo(function Leaderboard({
   const barH = isLrg ? 10 : 8;
 
   return (
-    <section style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)", borderRadius: r.borderRadius.medium, padding: r.spacing.medium, backdropFilter: "blur(14px)", marginBottom: r.spacing.medium }}>
+    <section
+      style={{
+        border: "1px solid rgba(255,255,255,0.10)",
+        background: "rgba(255,255,255,0.04)",
+        borderRadius: r.borderRadius.medium,
+        padding: r.spacing.medium,
+        backdropFilter: "blur(14px)",
+        marginBottom: r.spacing.medium,
+      }}
+    >
       <div style={{ fontSize: r.fontSize.body, fontWeight: 900, marginBottom: 6 }}>Leaderboard</div>
       <div style={{ opacity: 0.65, fontSize: r.fontSize.small }}>Total votes: {totalVotes}</div>
 
       {loading ? (
-        <div style={{ opacity: 0.75, fontSize: r.fontSize.body - 1, lineHeight: 1.35, padding: `${r.spacing.small}px 0` }}>Loading…</div>
+        <div
+          style={{ opacity: 0.75, fontSize: r.fontSize.body - 1, lineHeight: 1.35, padding: `${r.spacing.small}px 0` }}
+        >
+          Loading…
+        </div>
       ) : !data || rows.length === 0 ? (
-        <div style={{ opacity: 0.75, fontSize: r.fontSize.body - 1, lineHeight: 1.35, padding: `${r.spacing.small}px 0` }}>Noch keine Stimmen.</div>
+        <div
+          style={{ opacity: 0.75, fontSize: r.fontSize.body - 1, lineHeight: 1.35, padding: `${r.spacing.small}px 0` }}
+        >
+          Noch keine Stimmen.
+        </div>
       ) : (
         <div style={{ display: "grid", gap: r.spacing.small + 2, marginTop: r.spacing.medium }}>
           {rows.map((row, idx) => (
-            <div key={row.optionId} style={{ display: "grid", gridTemplateColumns: `${isLrg ? 32 : 24}px 1fr ${btnSize}px`, gap: r.spacing.small + 2, alignItems: "center", padding: `${r.spacing.small + 2}px ${r.spacing.small + 2}px`, borderRadius: r.borderRadius.small, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.20)" }}>
-              <div style={{ fontSize: r.fontSize.small, opacity: 0.75, fontWeight: 900, textAlign: "center" as const }}>{idx + 1}</div>
+            <div
+              key={row.optionId}
+              style={{
+                display: "grid",
+                gridTemplateColumns: `${isLrg ? 32 : 24}px 1fr ${btnSize}px`,
+                gap: r.spacing.small + 2,
+                alignItems: "center",
+                padding: `${r.spacing.small + 2}px ${r.spacing.small + 2}px`,
+                borderRadius: r.borderRadius.small,
+                border: "1px solid rgba(255,255,255,0.08)",
+                background: "rgba(0,0,0,0.20)",
+              }}
+            >
+              <div style={{ fontSize: r.fontSize.small, opacity: 0.75, fontWeight: 900, textAlign: "center" as const }}>
+                {idx + 1}
+              </div>
               <div style={{ minWidth: 0, display: "grid", gap: r.spacing.small }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
-                  <div style={{ fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, fontSize: r.fontSize.body }}>{row.node?.titel ?? row.optionId}</div>
+                  <div
+                    style={{
+                      fontWeight: 900,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap" as const,
+                      fontSize: r.fontSize.body,
+                    }}
+                  >
+                    {row.node?.titel ?? row.optionId}
+                  </div>
                   <div style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
                     <span style={{ fontWeight: 900, opacity: 0.9, fontSize: r.fontSize.body }}>{row.count}</span>
                     <span style={{ fontWeight: 900, opacity: 0.7, fontSize: r.fontSize.small }}>{row.pct}%</span>
                   </div>
                 </div>
-                <div style={{ height: barH, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-                  <div style={{ height: barH, borderRadius: 999, background: "rgba(255,255,255,0.55)", width: `${row.pct}%` }} />
+                <div
+                  style={{ height: barH, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}
+                >
+                  <div
+                    style={{
+                      height: barH,
+                      borderRadius: 999,
+                      background: "rgba(255,255,255,0.55)",
+                      width: `${row.pct}%`,
+                    }}
+                  />
                 </div>
               </div>
               <button
-                style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.06)", color: "white", borderRadius: r.borderRadius.small - 2, width: btnSize, height: btnSize, cursor: "pointer", fontWeight: 950, fontSize: r.fontSize.body }}
+                style={{
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: "rgba(255,255,255,0.06)",
+                  color: "white",
+                  borderRadius: r.borderRadius.small - 2,
+                  width: btnSize,
+                  height: btnSize,
+                  cursor: "pointer",
+                  fontWeight: 950,
+                  fontSize: r.fontSize.body,
+                }}
                 onClick={() => router.push(`/o/${encodeURIComponent(row.optionId)}`)}
               >
                 →

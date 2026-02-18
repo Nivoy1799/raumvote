@@ -8,7 +8,15 @@ export { SIDEBAR_W, HEADER_H };
 export const s: Record<string, React.CSSProperties> = {
   // ── Login ──
   shell: { position: "fixed", inset: 0, background: "black", color: "white", overflow: "auto", zIndex: 1 },
-  center: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100dvh", gap: 12, padding: 24 },
+  center: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: "100dvh",
+    gap: 12,
+    padding: 24,
+  },
 
   // ── Sidebar (desktop) ──
   sidebar: {
@@ -182,7 +190,13 @@ export const s: Record<string, React.CSSProperties> = {
   sessionMeta: { fontSize: 12, opacity: 0.6 },
   countdown: { marginTop: 8, fontSize: 18, fontWeight: 950, letterSpacing: -0.3 },
   deadlineText: { display: "block", fontSize: 11, opacity: 0.5, fontWeight: 600, marginTop: 2 },
-  sessionPast: { display: "flex", gap: 8, alignItems: "center", padding: "6px 0", borderTop: "1px solid rgba(255,255,255,0.06)" },
+  sessionPast: {
+    display: "flex",
+    gap: 8,
+    alignItems: "center",
+    padding: "6px 0",
+    borderTop: "1px solid rgba(255,255,255,0.06)",
+  },
 
   // ── Tokens ──
   tokenRow: {

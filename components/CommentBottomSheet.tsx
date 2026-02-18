@@ -38,7 +38,7 @@ export function CommentBottomSheet({ isOpen, onClose, sessionId, optionId, voter
     if (!isOpen || !voterId) return;
     fetch(
       `/api/comment?sessionId=${encodeURIComponent(sessionId)}&optionId=${encodeURIComponent(optionId)}&voterId=${encodeURIComponent(voterId)}`,
-      { cache: "no-store" }
+      { cache: "no-store" },
     )
       .then((r) => r.json())
       .then((d) => setComments(d.comments ?? []))
@@ -93,10 +93,8 @@ export function CommentBottomSheet({ isOpen, onClose, sessionId, optionId, voter
     if (d?.liked === undefined) return;
     setComments((prev) =>
       prev.map((c) =>
-        c.id === commentId
-          ? { ...c, isLiked: d.liked, likeCount: c.likeCount + (d.liked ? 1 : -1) }
-          : c
-      )
+        c.id === commentId ? { ...c, isLiked: d.liked, likeCount: c.likeCount + (d.liked ? 1 : -1) } : c,
+      ),
     );
   }
 
@@ -124,8 +122,20 @@ export function CommentBottomSheet({ isOpen, onClose, sessionId, optionId, voter
   return (
     <>
       <div style={s.backdrop} onClick={onClose} />
-      <div style={{ ...s.sheet, height: sheetHeight, borderTopLeftRadius: r.borderRadius.large, borderTopRightRadius: r.borderRadius.large }}>
-        <div style={{ padding: `${r.spacing.small}px ${r.spacing.medium}px ${r.spacing.small + 2}px`, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <div
+        style={{
+          ...s.sheet,
+          height: sheetHeight,
+          borderTopLeftRadius: r.borderRadius.large,
+          borderTopRightRadius: r.borderRadius.large,
+        }}
+      >
+        <div
+          style={{
+            padding: `${r.spacing.small}px ${r.spacing.medium}px ${r.spacing.small + 2}px`,
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
           <div style={s.dragHandle} />
           <div style={s.headerRow}>
             <span style={{ fontSize: r.fontSize.body + 2, fontWeight: 900 }}>Comments ({comments.length})</span>
@@ -143,11 +153,7 @@ export function CommentBottomSheet({ isOpen, onClose, sessionId, optionId, voter
               const replies = repliesByParent.get(c.id) ?? [];
               return (
                 <div key={c.id}>
-                  <CommentItem
-                    comment={c}
-                    onLike={toggleLike}
-                    onReply={readOnly ? undefined : startReply}
-                  />
+                  <CommentItem comment={c} onLike={toggleLike} onReply={readOnly ? undefined : startReply} />
                   {replies.length > 0 && (
                     <div style={s.repliesWrap}>
                       {replies.map((r) => (
@@ -168,7 +174,14 @@ export function CommentBottomSheet({ isOpen, onClose, sessionId, optionId, voter
         </div>
 
         {readOnly ? (
-          <div style={{ ...s.inputBar, paddingBottom: `calc(${r.spacing.medium}px + ${r.tabbarHeight}px + env(safe-area-inset-bottom))`, justifyContent: "center", opacity: 0.5 }}>
+          <div
+            style={{
+              ...s.inputBar,
+              paddingBottom: `calc(${r.spacing.medium}px + ${r.tabbarHeight}px + env(safe-area-inset-bottom))`,
+              justifyContent: "center",
+              opacity: 0.5,
+            }}
+          >
             <span style={{ fontSize: r.fontSize.small, fontWeight: 800 }}>Abstimmung beendet</span>
           </div>
         ) : (
@@ -183,7 +196,13 @@ export function CommentBottomSheet({ isOpen, onClose, sessionId, optionId, voter
                 </button>
               </div>
             )}
-            <form onSubmit={submit} style={{ ...s.inputBar, paddingBottom: `calc(${r.spacing.medium}px + ${r.tabbarHeight}px + env(safe-area-inset-bottom))` }}>
+            <form
+              onSubmit={submit}
+              style={{
+                ...s.inputBar,
+                paddingBottom: `calc(${r.spacing.medium}px + ${r.tabbarHeight}px + env(safe-area-inset-bottom))`,
+              }}
+            >
               <input
                 ref={inputRef}
                 value={text}
@@ -195,7 +214,13 @@ export function CommentBottomSheet({ isOpen, onClose, sessionId, optionId, voter
               <button
                 type="submit"
                 disabled={!text.trim() || submitting}
-                style={{ ...s.sendBtn, width: r.breakpoint === "large" ? 48 : 40, height: r.breakpoint === "large" ? 48 : 40, fontSize: r.fontSize.body + 1, opacity: !text.trim() || submitting ? 0.35 : 1 }}
+                style={{
+                  ...s.sendBtn,
+                  width: r.breakpoint === "large" ? 48 : 40,
+                  height: r.breakpoint === "large" ? 48 : 40,
+                  fontSize: r.fontSize.body + 1,
+                  opacity: !text.trim() || submitting ? 0.35 : 1,
+                }}
               >
                 <FontAwesomeIcon icon={faPaperPlane} />
               </button>
@@ -223,16 +248,10 @@ function CommentItem({
       <div style={s.itemRow}>
         <div style={{ ...s.avatar, ...(isReply ? { width: 26, height: 26 } : {}) }}>
           {c.avatarUrl ? (
-            <img
-              src={c.avatarUrl}
-              alt=""
-              style={{ ...s.avatarImg, ...(isReply ? { width: 26, height: 26 } : {}) }}
-            />
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={c.avatarUrl} alt="" style={{ ...s.avatarImg, ...(isReply ? { width: 26, height: 26 } : {}) }} />
           ) : (
-            <FontAwesomeIcon
-              icon={faUser}
-              style={{ fontSize: isReply ? 11 : 14, color: "rgba(255,255,255,0.35)" }}
-            />
+            <FontAwesomeIcon icon={faUser} style={{ fontSize: isReply ? 11 : 14, color: "rgba(255,255,255,0.35)" }} />
           )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>

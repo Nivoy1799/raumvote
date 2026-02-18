@@ -21,11 +21,7 @@ function getS3(): S3Client {
   return _s3;
 }
 
-export async function uploadToR2(
-  key: string,
-  body: Buffer,
-  contentType: string,
-): Promise<string> {
+export async function uploadToR2(key: string, body: Buffer, contentType: string): Promise<string> {
   const bucket = process.env.R2_BUCKET_NAME!;
   const publicUrl = process.env.R2_PUBLIC_URL!;
 

@@ -34,7 +34,7 @@ export default function ResultsClient() {
     (async () => {
       const res = await fetch(
         `/api/vote/status?sessionId=${encodeURIComponent(sessionId)}&voterId=${encodeURIComponent(voterId)}`,
-        { cache: "no-store" }
+        { cache: "no-store" },
       );
       const j = await res.json().catch(() => null);
       const optionId: string | null = j?.optionId ?? null;
@@ -54,7 +54,13 @@ export default function ResultsClient() {
 
   return (
     <main style={{ minHeight: "100dvh", background: "black", color: "white" }}>
-      <div style={{ width: r.maxWidth, margin: "0 auto", padding: `${r.spacing.medium + 2}px ${r.spacing.medium}px ${r.tabbarHeight + r.spacing.large}px` }}>
+      <div
+        style={{
+          width: r.maxWidth,
+          margin: "0 auto",
+          padding: `${r.spacing.medium + 2}px ${r.spacing.medium}px ${r.tabbarHeight + r.spacing.large}px`,
+        }}
+      >
         <div style={{ display: "grid", gap: 4, marginBottom: r.spacing.medium }}>
           <div style={{ fontSize: r.fontSize.title + 3, fontWeight: 950, letterSpacing: -0.3 }}>Ergebnisse</div>
           <div style={{ fontSize: r.fontSize.small, opacity: 0.7 }}>{sessionId || "—"}</div>
@@ -62,27 +68,107 @@ export default function ResultsClient() {
 
         <SessionTimeline session={session} />
 
-        <section style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)", borderRadius: r.borderRadius.medium, padding: r.spacing.medium, backdropFilter: "blur(14px)", marginBottom: r.spacing.medium }}>
+        <section
+          style={{
+            border: "1px solid rgba(255,255,255,0.10)",
+            background: "rgba(255,255,255,0.04)",
+            borderRadius: r.borderRadius.medium,
+            padding: r.spacing.medium,
+            backdropFilter: "blur(14px)",
+            marginBottom: r.spacing.medium,
+          }}
+        >
           <div style={{ fontSize: r.fontSize.body, fontWeight: 900, marginBottom: 6 }}>Deine aktuelle Wahl</div>
           {!myNode ? (
-            <div style={{ opacity: 0.75, fontSize: r.fontSize.body - 1, lineHeight: 1.35, padding: `${r.spacing.small}px 0` }}>
+            <div
+              style={{
+                opacity: 0.75,
+                fontSize: r.fontSize.body - 1,
+                lineHeight: 1.35,
+                padding: `${r.spacing.small}px 0`,
+              }}
+            >
               Du hast noch nicht abgestimmt.
               <div style={{ marginTop: 10 }}>
-                <button style={{ border: "1px solid rgba(255,255,255,0.16)", background: "rgba(255,255,255,0.10)", color: "white", padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, cursor: "pointer", fontWeight: 850, fontSize: r.fontSize.body }} onClick={() => router.push("/start")}>Start</button>
+                <button
+                  style={{
+                    border: "1px solid rgba(255,255,255,0.16)",
+                    background: "rgba(255,255,255,0.10)",
+                    color: "white",
+                    padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`,
+                    borderRadius: r.borderRadius.small,
+                    cursor: "pointer",
+                    fontWeight: 850,
+                    fontSize: r.fontSize.body,
+                  }}
+                  onClick={() => router.push("/start")}
+                >
+                  Start
+                </button>
               </div>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: `${imgW}px 1fr`, gap: r.spacing.medium, marginTop: r.spacing.small }}>
-              <div style={{ position: "relative", width: imgW, height: imgH, borderRadius: r.borderRadius.small, overflow: "hidden", border: "1px solid rgba(255,255,255,0.10)" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: `${imgW}px 1fr`,
+                gap: r.spacing.medium,
+                marginTop: r.spacing.small,
+              }}
+            >
+              <div
+                style={{
+                  position: "relative",
+                  width: imgW,
+                  height: imgH,
+                  borderRadius: r.borderRadius.small,
+                  overflow: "hidden",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                }}
+              >
                 <Image src={myNode.mediaUrl || placeholderUrl} alt={myNode.titel} fill style={{ objectFit: "cover" }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.65), transparent 60%)" }} />
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "linear-gradient(to top, rgba(0,0,0,0.65), transparent 60%)",
+                  }}
+                />
               </div>
               <div style={{ minWidth: 0, display: "grid", gap: 6, alignContent: "start" }}>
                 <div style={{ fontWeight: 950, letterSpacing: -0.2, fontSize: r.fontSize.body }}>{myNode.titel}</div>
                 <div style={{ fontSize: r.fontSize.small, opacity: 0.75, lineHeight: 1.35 }}>{myNode.beschreibung}</div>
                 <div style={{ display: "flex", gap: 10, marginTop: 6, flexWrap: "wrap" as const }}>
-                  <button style={{ border: "1px solid rgba(255,255,255,0.16)", background: "rgba(255,255,255,0.10)", color: "white", padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, cursor: "pointer", fontWeight: 850, fontSize: r.fontSize.body }} onClick={() => router.push(`/o/${encodeURIComponent(myNode.id)}`)}>Öffnen</button>
-                  <button style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(0,0,0,0.25)", color: "white", padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, cursor: "pointer", fontWeight: 850, fontSize: r.fontSize.body }} onClick={() => router.push("/start")}>Ändern</button>
+                  <button
+                    style={{
+                      border: "1px solid rgba(255,255,255,0.16)",
+                      background: "rgba(255,255,255,0.10)",
+                      color: "white",
+                      padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`,
+                      borderRadius: r.borderRadius.small,
+                      cursor: "pointer",
+                      fontWeight: 850,
+                      fontSize: r.fontSize.body,
+                    }}
+                    onClick={() => router.push(`/o/${encodeURIComponent(myNode.id)}`)}
+                  >
+                    Öffnen
+                  </button>
+                  <button
+                    style={{
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      background: "rgba(0,0,0,0.25)",
+                      color: "white",
+                      padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`,
+                      borderRadius: r.borderRadius.small,
+                      cursor: "pointer",
+                      fontWeight: 850,
+                      fontSize: r.fontSize.body,
+                    }}
+                    onClick={() => router.push("/start")}
+                  >
+                    Ändern
+                  </button>
                 </div>
               </div>
             </div>

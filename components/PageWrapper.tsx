@@ -7,7 +7,12 @@ export function PageWrapper({ children }: { children: ReactNode }) {
   const r = useResponsive();
 
   return (
-    <div style={{ minHeight: "100dvh", paddingBottom: `calc(${r.tabbarHeight}px + env(safe-area-inset-bottom) + ${r.spacing.medium}px)` }}>
+    <div
+      style={{
+        minHeight: "100dvh",
+        paddingBottom: `calc(${r.tabbarHeight}px + env(safe-area-inset-bottom) + ${r.spacing.medium}px)`,
+      }}
+    >
       {children}
     </div>
   );

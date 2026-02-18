@@ -9,11 +9,28 @@ import { useAuth } from "@/lib/useAuth";
 import { useResponsive } from "@/lib/useResponsive";
 import { useTTS } from "@/lib/useTTS";
 
+type DiscoveredNode = {
+  id: string;
+  titel: string;
+  beschreibung: string;
+  mediaUrl: string | null;
+  depth: number;
+  createdAt: string;
+  parent: { id: string } | null;
+};
+
 type LikedNode = {
   id: string;
   optionId: string;
   createdAt: string;
-  node: { id: string; titel: string; beschreibung: string; mediaUrl: string | null; parentId: string | null; depth: number } | null;
+  node: {
+    id: string;
+    titel: string;
+    beschreibung: string;
+    mediaUrl: string | null;
+    parentId: string | null;
+    depth: number;
+  } | null;
 };
 
 export default function MePage() {
@@ -29,7 +46,9 @@ export default function MePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [likedNodes, setLikedNodes] = useState<LikedNode[]>([]);
   const [likesLoading, setLikesLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState<"profile" | "account" | "likes" | "discoveries" | "settings" | "delete">("profile");
+  const [currentPage, setCurrentPage] = useState<
+    "profile" | "account" | "likes" | "discoveries" | "settings" | "delete"
+  >("profile");
 
   // Settings state
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
@@ -40,14 +59,14 @@ export default function MePage() {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // Discoveries state
-  const [discoveries, setDiscoveries] = useState<any[]>([]);
+  const [discoveries, setDiscoveries] = useState<DiscoveredNode[]>([]);
   const [discoveriesLoading, setDiscoveriesLoading] = useState(false);
 
   // Load user profile and liked nodes
   useEffect(() => {
     if (!voterId) return;
     (async () => {
-      setLoading(true);
+      queueMicrotask(() => setLoading(true));
       const res = await fetch(`/api/me?voterId=${encodeURIComponent(voterId)}`, { cache: "no-store" });
       const data = await res.json().catch(() => null);
       setUsername((data?.username ?? "").toString());
@@ -56,7 +75,7 @@ export default function MePage() {
     })();
     // Fetch liked nodes
     (async () => {
-      setLikesLoading(true);
+      queueMicrotask(() => setLikesLoading(true));
       const res = await fetch(`/api/like/list?voterId=${encodeURIComponent(voterId)}`, { cache: "no-store" });
       const data = await res.json().catch(() => null);
       setLikedNodes(data?.likes ?? []);
@@ -67,21 +86,19 @@ export default function MePage() {
   // Load settings from localStorage
   useEffect(() => {
     const vibOff = localStorage.getItem("rv-vibration-disabled");
-    setVibrationEnabled(vibOff !== "0");
-
     const cbMode = localStorage.getItem("rv-colorblind-mode");
-    setColorblindMode(cbMode || "none");
-
     const ttsOn = localStorage.getItem("rv-tts-enabled");
-    setTtsEnabled(ttsOn === "1");
-
     const voice = localStorage.getItem("rv-tts-voice");
-    setTtsVoice(voice || "");
-
     const rate = localStorage.getItem("rv-tts-rate");
-    setTtsRate(rate ? parseFloat(rate) : 1);
 
-    setSettingsLoaded(true);
+    queueMicrotask(() => {
+      setVibrationEnabled(vibOff !== "0");
+      setColorblindMode(cbMode || "none");
+      setTtsEnabled(ttsOn === "1");
+      setTtsVoice(voice || "");
+      setTtsRate(rate ? parseFloat(rate) : 1);
+      setSettingsLoaded(true);
+    });
   }, []);
 
   const maskedId = useMemo(() => {
@@ -136,7 +153,13 @@ export default function MePage() {
 
   return (
     <main style={{ position: "fixed", inset: 0, background: "black", color: "white", overflow: "auto", zIndex: 1 }}>
-      <div style={{ width: r.maxWidth, margin: "0 auto", padding: `${r.spacing.medium + 2}px ${r.spacing.medium}px ${r.tabbarHeight + r.spacing.large}px` }}>
+      <div
+        style={{
+          width: r.maxWidth,
+          margin: "0 auto",
+          padding: `${r.spacing.medium + 2}px ${r.spacing.medium}px ${r.tabbarHeight + r.spacing.large}px`,
+        }}
+      >
         {/* Header with back button */}
         {currentPage !== "profile" && (
           <button
@@ -158,9 +181,20 @@ export default function MePage() {
         {currentPage === "profile" && (
           <>
             <div style={{ fontSize: r.fontSize.title + 3, fontWeight: 950, letterSpacing: -0.3 }}>Profil</div>
-            <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginTop: 6, lineHeight: 1.35 }}>Verwalte dein Konto und deine Einstellungen.</div>
+            <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginTop: 6, lineHeight: 1.35 }}>
+              Verwalte dein Konto und deine Einstellungen.
+            </div>
 
-            <section style={{ marginTop: r.spacing.medium, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)", borderRadius: r.borderRadius.medium, padding: r.spacing.medium, backdropFilter: "blur(14px)" }}>
+            <section
+              style={{
+                marginTop: r.spacing.medium,
+                border: "1px solid rgba(255,255,255,0.10)",
+                background: "rgba(255,255,255,0.04)",
+                borderRadius: r.borderRadius.medium,
+                padding: r.spacing.medium,
+                backdropFilter: "blur(14px)",
+              }}
+            >
               <div style={{ display: "flex", justifyContent: "center", marginBottom: r.spacing.medium }}>
                 <button
                   onClick={() => setCurrentPage("account")}
@@ -182,18 +216,63 @@ export default function MePage() {
                   }}
                 >
                   {avatarUrl ? (
-                    <img src={avatarUrl} alt="Avatar" style={{ width: avatarSize, height: avatarSize, borderRadius: "50%", objectFit: "cover" as const }} />
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar"
+                      style={{
+                        width: avatarSize,
+                        height: avatarSize,
+                        borderRadius: "50%",
+                        objectFit: "cover" as const,
+                      }}
+                    />
                   ) : (
-                    <FontAwesomeIcon icon={faUser} style={{ fontSize: isLrg ? 48 : 32, color: "rgba(255,255,255,0.4)" }} />
+                    <FontAwesomeIcon
+                      icon={faUser}
+                      style={{ fontSize: isLrg ? 48 : 32, color: "rgba(255,255,255,0.4)" }}
+                    />
                   )}
                 </button>
               </div>
 
-              <div style={{ fontSize: r.fontSize.body, fontWeight: 850, marginBottom: r.spacing.small }}>Deine lokale ID</div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: r.spacing.large }}>
-                <code style={{ display: "inline-flex", padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(0,0,0,0.35)", color: "rgba(255,255,255,0.9)", fontSize: r.fontSize.small, overflow: "hidden" }}>{maskedId || "—"}</code>
+              <div style={{ fontSize: r.fontSize.body, fontWeight: 850, marginBottom: r.spacing.small }}>
+                Deine lokale ID
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  marginBottom: r.spacing.large,
+                }}
+              >
+                <code
+                  style={{
+                    display: "inline-flex",
+                    padding: `${r.spacing.small + 2}px ${r.spacing.medium}px`,
+                    borderRadius: r.borderRadius.small,
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    background: "rgba(0,0,0,0.35)",
+                    color: "rgba(255,255,255,0.9)",
+                    fontSize: r.fontSize.small,
+                    overflow: "hidden",
+                  }}
+                >
+                  {maskedId || "—"}
+                </code>
                 <button
-                  style={{ width: isLrg ? 48 : 40, height: isLrg ? 48 : 40, borderRadius: r.borderRadius.small, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.06)", color: "white", cursor: "pointer", fontWeight: 900, fontSize: r.fontSize.body }}
+                  style={{
+                    width: isLrg ? 48 : 40,
+                    height: isLrg ? 48 : 40,
+                    borderRadius: r.borderRadius.small,
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    background: "rgba(255,255,255,0.06)",
+                    color: "white",
+                    cursor: "pointer",
+                    fontWeight: 900,
+                    fontSize: r.fontSize.body,
+                  }}
                   onClick={async () => voterId && navigator.clipboard.writeText(voterId)}
                   aria-label="Copy voterId"
                   title="Copy"
@@ -319,15 +398,66 @@ export default function MePage() {
         {/* Account Page */}
         {currentPage === "account" && (
           <>
-            <section style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)", borderRadius: r.borderRadius.medium, padding: r.spacing.medium, backdropFilter: "blur(14px)" }}>
+            <section
+              style={{
+                border: "1px solid rgba(255,255,255,0.10)",
+                background: "rgba(255,255,255,0.04)",
+                borderRadius: r.borderRadius.medium,
+                padding: r.spacing.medium,
+                backdropFilter: "blur(14px)",
+              }}
+            >
               <div style={{ display: "flex", justifyContent: "center", marginBottom: r.spacing.medium }}>
-                <button style={{ position: "relative" as const, width: avatarSize, height: avatarSize, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "2px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "visible", cursor: "pointer", padding: 0, color: "white" }} onClick={() => fileRef.current?.click()}>
+                <button
+                  style={{
+                    position: "relative" as const,
+                    width: avatarSize,
+                    height: avatarSize,
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.08)",
+                    border: "2px solid rgba(255,255,255,0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "visible",
+                    cursor: "pointer",
+                    padding: 0,
+                    color: "white",
+                  }}
+                  onClick={() => fileRef.current?.click()}
+                >
                   {avatarUrl ? (
-                    <img src={avatarUrl} alt="Avatar" style={{ width: avatarSize, height: avatarSize, borderRadius: "50%", objectFit: "cover" as const }} />
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar"
+                      style={{
+                        width: avatarSize,
+                        height: avatarSize,
+                        borderRadius: "50%",
+                        objectFit: "cover" as const,
+                      }}
+                    />
                   ) : (
-                    <FontAwesomeIcon icon={faUser} style={{ fontSize: isLrg ? 48 : 32, color: "rgba(255,255,255,0.4)" }} />
+                    <FontAwesomeIcon
+                      icon={faUser}
+                      style={{ fontSize: isLrg ? 48 : 32, color: "rgba(255,255,255,0.4)" }}
+                    />
                   )}
-                  <div style={{ position: "absolute" as const, bottom: -2, right: -2, width: isLrg ? 34 : 26, height: isLrg ? 34 : 26, borderRadius: "50%", background: "rgba(96,165,250,0.9)", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid black" }}>
+                  <div
+                    style={{
+                      position: "absolute" as const,
+                      bottom: -2,
+                      right: -2,
+                      width: isLrg ? 34 : 26,
+                      height: isLrg ? 34 : 26,
+                      borderRadius: "50%",
+                      background: "rgba(96,165,250,0.9)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: "2px solid black",
+                    }}
+                  >
                     <FontAwesomeIcon icon={faCamera} style={{ fontSize: isLrg ? 14 : 11 }} />
                   </div>
                 </button>
@@ -341,12 +471,36 @@ export default function MePage() {
                 onBlur={save}
                 placeholder="z.B. Liam_14"
                 maxLength={24}
-                style={{ marginTop: 8, width: "100%", padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`, borderRadius: r.borderRadius.small, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.35)", color: "white", outline: "none", fontSize: r.fontSize.body, fontWeight: 750 }}
+                style={{
+                  marginTop: 8,
+                  width: "100%",
+                  padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`,
+                  borderRadius: r.borderRadius.small,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(0,0,0,0.35)",
+                  color: "white",
+                  outline: "none",
+                  fontSize: r.fontSize.body,
+                  fontWeight: 750,
+                }}
                 disabled={loading}
               />
 
-              <div style={{ marginTop: r.spacing.medium, display: "flex", alignItems: "center", gap: 10, minHeight: 20 }}>
-                {saved && <div style={{ fontSize: r.fontSize.small, opacity: 0.85, animation: "fadeOut 1.5s ease-in-out forwards", animationDelay: "0.3s" }}>Gespeichert ✓</div>}
+              <div
+                style={{ marginTop: r.spacing.medium, display: "flex", alignItems: "center", gap: 10, minHeight: 20 }}
+              >
+                {saved && (
+                  <div
+                    style={{
+                      fontSize: r.fontSize.small,
+                      opacity: 0.85,
+                      animation: "fadeOut 1.5s ease-in-out forwards",
+                      animationDelay: "0.3s",
+                    }}
+                  >
+                    Gespeichert ✓
+                  </div>
+                )}
               </div>
               <style>{`
                 @keyframes fadeOut {
@@ -361,7 +515,16 @@ export default function MePage() {
         {/* Likes Page */}
         {currentPage === "likes" && (
           <div>
-            <div style={{ fontSize: r.fontSize.title + 2, fontWeight: 950, letterSpacing: -0.3, marginBottom: r.spacing.small }}>Deine Likes</div>
+            <div
+              style={{
+                fontSize: r.fontSize.title + 2,
+                fontWeight: 950,
+                letterSpacing: -0.3,
+                marginBottom: r.spacing.small,
+              }}
+            >
+              Deine Likes
+            </div>
             {likesLoading ? (
               <div style={{ opacity: 0.5, fontSize: r.fontSize.body }}>Laden...</div>
             ) : likedNodes.length === 0 ? (
@@ -389,16 +552,52 @@ export default function MePage() {
                         width: "100%",
                       }}
                     >
-                      <div style={{ width: 56, height: 56, borderRadius: r.borderRadius.small - 4, overflow: "hidden", flexShrink: 0, position: "relative" as const, background: "rgba(255,255,255,0.06)" }}>
+                      <div
+                        style={{
+                          width: 56,
+                          height: 56,
+                          borderRadius: r.borderRadius.small - 4,
+                          overflow: "hidden",
+                          flexShrink: 0,
+                          position: "relative" as const,
+                          background: "rgba(255,255,255,0.06)",
+                        }}
+                      >
                         {n.mediaUrl && (
                           <NextImage src={n.mediaUrl} alt={n.titel} fill style={{ objectFit: "cover" }} sizes="56px" />
                         )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: r.fontSize.body, fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{n.titel}</div>
-                        <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{n.beschreibung}</div>
+                        <div
+                          style={{
+                            fontSize: r.fontSize.body,
+                            fontWeight: 900,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap" as const,
+                          }}
+                        >
+                          {n.titel}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: r.fontSize.small,
+                            opacity: 0.7,
+                            marginTop: 2,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap" as const,
+                          }}
+                        >
+                          {n.beschreibung}
+                        </div>
                         <div style={{ fontSize: r.fontSize.small - 1, opacity: 0.4, marginTop: 2 }}>
-                          Tiefe {n.depth} &middot; {new Date(like.createdAt).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                          Tiefe {n.depth} &middot;{" "}
+                          {new Date(like.createdAt).toLocaleDateString("de-CH", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })}
                         </div>
                       </div>
                     </button>
@@ -412,8 +611,19 @@ export default function MePage() {
         {/* Discoveries Page */}
         {currentPage === "discoveries" && (
           <div>
-            <div style={{ fontSize: r.fontSize.title + 2, fontWeight: 950, letterSpacing: -0.3, marginBottom: r.spacing.small }}>Deine Entdeckungen</div>
-            <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginBottom: r.spacing.medium }}>Nodes, die du als Erste entdeckt hast 🔍</div>
+            <div
+              style={{
+                fontSize: r.fontSize.title + 2,
+                fontWeight: 950,
+                letterSpacing: -0.3,
+                marginBottom: r.spacing.small,
+              }}
+            >
+              Deine Entdeckungen
+            </div>
+            <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginBottom: r.spacing.medium }}>
+              Nodes, die du als Erste entdeckt hast 🔍
+            </div>
             {discoveriesLoading ? (
               <div style={{ opacity: 0.5, fontSize: r.fontSize.body }}>Laden...</div>
             ) : discoveries.length === 0 ? (
@@ -448,16 +658,58 @@ export default function MePage() {
                         e.currentTarget.style.borderColor = "rgba(96,165,250,0.20)";
                       }}
                     >
-                      <div style={{ width: 56, height: 56, borderRadius: r.borderRadius.small - 4, overflow: "hidden", flexShrink: 0, position: "relative" as const, background: "rgba(255,255,255,0.06)" }}>
+                      <div
+                        style={{
+                          width: 56,
+                          height: 56,
+                          borderRadius: r.borderRadius.small - 4,
+                          overflow: "hidden",
+                          flexShrink: 0,
+                          position: "relative" as const,
+                          background: "rgba(255,255,255,0.06)",
+                        }}
+                      >
                         {disc.mediaUrl && (
-                          <NextImage src={disc.mediaUrl} alt={disc.titel} fill style={{ objectFit: "cover" }} sizes="56px" />
+                          <NextImage
+                            src={disc.mediaUrl}
+                            alt={disc.titel}
+                            fill
+                            style={{ objectFit: "cover" }}
+                            sizes="56px"
+                          />
                         )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: r.fontSize.body, fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{disc.titel}</div>
-                        <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{disc.beschreibung}</div>
+                        <div
+                          style={{
+                            fontSize: r.fontSize.body,
+                            fontWeight: 900,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap" as const,
+                          }}
+                        >
+                          {disc.titel}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: r.fontSize.small,
+                            opacity: 0.7,
+                            marginTop: 2,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap" as const,
+                          }}
+                        >
+                          {disc.beschreibung}
+                        </div>
                         <div style={{ fontSize: r.fontSize.small - 1, opacity: 0.4, marginTop: 2 }}>
-                          Tiefe {disc.depth} &middot; ⭐ Entdeckt {new Date(disc.createdAt).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                          Tiefe {disc.depth} &middot; ⭐ Entdeckt{" "}
+                          {new Date(disc.createdAt).toLocaleDateString("de-CH", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })}
                         </div>
                       </div>
                     </button>
@@ -471,10 +723,37 @@ export default function MePage() {
         {/* Settings Page */}
         {currentPage === "settings" && (
           <div>
-            <div style={{ fontSize: r.fontSize.title + 2, fontWeight: 950, letterSpacing: -0.3, marginBottom: r.spacing.medium }}>Einstellungen</div>
-            <section style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)", borderRadius: r.borderRadius.medium, padding: r.spacing.medium, backdropFilter: "blur(14px)" }}>
-              <div style={{ fontSize: r.fontSize.body, fontWeight: 850, marginBottom: r.spacing.small }}>Vibrationen</div>
-              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: r.spacing.medium }}>
+            <div
+              style={{
+                fontSize: r.fontSize.title + 2,
+                fontWeight: 950,
+                letterSpacing: -0.3,
+                marginBottom: r.spacing.medium,
+              }}
+            >
+              Einstellungen
+            </div>
+            <section
+              style={{
+                border: "1px solid rgba(255,255,255,0.10)",
+                background: "rgba(255,255,255,0.04)",
+                borderRadius: r.borderRadius.medium,
+                padding: r.spacing.medium,
+                backdropFilter: "blur(14px)",
+              }}
+            >
+              <div style={{ fontSize: r.fontSize.body, fontWeight: 850, marginBottom: r.spacing.small }}>
+                Vibrationen
+              </div>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  cursor: "pointer",
+                  marginBottom: r.spacing.medium,
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={vibrationEnabled}
@@ -488,7 +767,16 @@ export default function MePage() {
                 <span style={{ fontSize: r.fontSize.body, opacity: 0.8 }}>Vibrationen aktivieren</span>
               </label>
 
-              <div style={{ fontSize: r.fontSize.body, fontWeight: 850, marginBottom: r.spacing.small, marginTop: r.spacing.medium }}>Farbblindheit</div>
+              <div
+                style={{
+                  fontSize: r.fontSize.body,
+                  fontWeight: 850,
+                  marginBottom: r.spacing.small,
+                  marginTop: r.spacing.medium,
+                }}
+              >
+                Farbblindheit
+              </div>
               <select
                 value={colorblindMode}
                 onChange={(e) => {
@@ -508,15 +796,40 @@ export default function MePage() {
                   cursor: "pointer",
                 }}
               >
-                <option value="none" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Keine</option>
-                <option value="deuteranopia" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Deuteranopia (Rotgrünblindheit)</option>
-                <option value="protanopia" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Protanopia (Rotblindheit)</option>
-                <option value="tritanopia" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Tritanopia (Blaugelb-Blindheit)</option>
+                <option value="none" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>
+                  Keine
+                </option>
+                <option value="deuteranopia" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>
+                  Deuteranopia (Rotgrünblindheit)
+                </option>
+                <option value="protanopia" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>
+                  Protanopia (Rotblindheit)
+                </option>
+                <option value="tritanopia" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>
+                  Tritanopia (Blaugelb-Blindheit)
+                </option>
               </select>
 
               {/* TTS Settings */}
-              <div style={{ fontSize: r.fontSize.body, fontWeight: 850, marginBottom: r.spacing.small, marginTop: r.spacing.medium }}>Vorlesen (Text-zu-Sprache)</div>
-              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: r.spacing.medium }}>
+              <div
+                style={{
+                  fontSize: r.fontSize.body,
+                  fontWeight: 850,
+                  marginBottom: r.spacing.small,
+                  marginTop: r.spacing.medium,
+                }}
+              >
+                Vorlesen (Text-zu-Sprache)
+              </div>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  cursor: "pointer",
+                  marginBottom: r.spacing.medium,
+                }}
+              >
                 <input
                   id="tts-enable"
                   type="checkbox"
@@ -531,11 +844,22 @@ export default function MePage() {
                 />
                 <span style={{ fontSize: r.fontSize.body, opacity: 0.8 }}>Vorlesen aktivieren</span>
               </label>
-              <div id="tts-desc" style={{ fontSize: r.fontSize.small, opacity: 0.6, marginBottom: r.spacing.medium }}>Inhalte werden automatisch vorgelesen</div>
+              <div id="tts-desc" style={{ fontSize: r.fontSize.small, opacity: 0.6, marginBottom: r.spacing.medium }}>
+                Inhalte werden automatisch vorgelesen
+              </div>
 
               {ttsEnabled && (
                 <>
-                  <label htmlFor="tts-voice" style={{ fontSize: r.fontSize.small, opacity: 0.75, fontWeight: 850, display: "block", marginBottom: 8 }}>
+                  <label
+                    htmlFor="tts-voice"
+                    style={{
+                      fontSize: r.fontSize.small,
+                      opacity: 0.75,
+                      fontWeight: 850,
+                      display: "block",
+                      marginBottom: 8,
+                    }}
+                  >
                     Stimme
                   </label>
                   <select
@@ -558,19 +882,34 @@ export default function MePage() {
                       cursor: "pointer",
                     }}
                   >
-                    <option value="" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Standardstimme</option>
+                    <option value="" style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>
+                      Standardstimme
+                    </option>
                     {voices.length === 0 ? (
                       <option style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>Wird geladen...</option>
                     ) : (
                       voices.map((v) => (
-                        <option key={v.voiceURI} value={v.voiceURI} style={{ background: "rgba(0,0,0,0.9)", color: "white" }}>
+                        <option
+                          key={v.voiceURI}
+                          value={v.voiceURI}
+                          style={{ background: "rgba(0,0,0,0.9)", color: "white" }}
+                        >
                           {v.name}
                         </option>
                       ))
                     )}
                   </select>
 
-                  <label htmlFor="tts-rate" style={{ fontSize: r.fontSize.small, opacity: 0.75, fontWeight: 850, display: "block", marginBottom: 8 }}>
+                  <label
+                    htmlFor="tts-rate"
+                    style={{
+                      fontSize: r.fontSize.small,
+                      opacity: 0.75,
+                      fontWeight: 850,
+                      display: "block",
+                      marginBottom: 8,
+                    }}
+                  >
                     Lesegeschwindigkeit: {ttsRate}×
                   </label>
                   <input
@@ -633,7 +972,14 @@ export default function MePage() {
                 </>
               )}
 
-              <div style={{ marginTop: r.spacing.large, padding: r.spacing.small, background: "rgba(255,255,255,0.05)", borderRadius: r.borderRadius.small }}>
+              <div
+                style={{
+                  marginTop: r.spacing.large,
+                  padding: r.spacing.small,
+                  background: "rgba(255,255,255,0.05)",
+                  borderRadius: r.borderRadius.small,
+                }}
+              >
                 <button
                   onClick={() => setCurrentPage("delete")}
                   style={{
@@ -658,11 +1004,33 @@ export default function MePage() {
         {/* Delete Account Page */}
         {currentPage === "delete" && (
           <div>
-            <div style={{ fontSize: r.fontSize.title + 2, fontWeight: 950, letterSpacing: -0.3, marginBottom: r.spacing.medium, color: "rgba(239,68,68,0.9)" }}>Konto löschen</div>
-            <section style={{ border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.08)", borderRadius: r.borderRadius.medium, padding: r.spacing.medium, backdropFilter: "blur(14px)" }}>
-              <div style={{ fontSize: r.fontSize.body, lineHeight: 1.6, marginBottom: r.spacing.medium, opacity: 0.85 }}>
-                <strong>Warnung:</strong> Das Löschen deines Kontos ist <strong>endgültig</strong> und kann nicht rückgängig gemacht werden.
-                <br /><br />
+            <div
+              style={{
+                fontSize: r.fontSize.title + 2,
+                fontWeight: 950,
+                letterSpacing: -0.3,
+                marginBottom: r.spacing.medium,
+                color: "rgba(239,68,68,0.9)",
+              }}
+            >
+              Konto löschen
+            </div>
+            <section
+              style={{
+                border: "1px solid rgba(239,68,68,0.25)",
+                background: "rgba(239,68,68,0.08)",
+                borderRadius: r.borderRadius.medium,
+                padding: r.spacing.medium,
+                backdropFilter: "blur(14px)",
+              }}
+            >
+              <div
+                style={{ fontSize: r.fontSize.body, lineHeight: 1.6, marginBottom: r.spacing.medium, opacity: 0.85 }}
+              >
+                <strong>Warnung:</strong> Das Löschen deines Kontos ist <strong>endgültig</strong> und kann nicht
+                rückgängig gemacht werden.
+                <br />
+                <br />
                 Folgendes wird gelöscht:
                 <ul style={{ marginLeft: 20, marginTop: 8 }}>
                   <li>Dein Profilbild</li>

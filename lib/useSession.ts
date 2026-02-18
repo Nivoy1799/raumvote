@@ -39,7 +39,10 @@ export function useSession() {
 
     // Refresh every 60s while active
     const interval = setInterval(load, 60_000);
-    return () => { mounted = false; clearInterval(interval); };
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const isOpen = session?.status === "active" && (session.remainingMs ?? 0) > 0;

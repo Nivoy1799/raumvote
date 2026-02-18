@@ -1,336 +1,345 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RaumVote — Anleitung</title>
-<style>
-  @page {
-    size: A4;
-    margin: 20mm 18mm;
-  }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RaumVote — Anleitung</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 20mm 18mm;
+      }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-  body {
-    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
-    color: #1a1a1a;
-    line-height: 1.55;
-    font-size: 13.5pt;
-    max-width: 700px;
-    margin: 0 auto;
-    padding: 40px 24px;
-  }
+      body {
+        font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+        color: #1a1a1a;
+        line-height: 1.55;
+        font-size: 13.5pt;
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 40px 24px;
+      }
 
-  @media print {
-    body { padding: 0; max-width: none; }
-  }
+      @media print {
+        body {
+          padding: 0;
+          max-width: none;
+        }
+      }
 
-  /* ---- Header ---- */
-  .header {
-    text-align: center;
-    margin-bottom: 28px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #111;
-  }
-  .header h1 {
-    font-size: 28pt;
-    font-weight: 950;
-    letter-spacing: -0.5px;
-    margin-bottom: 4px;
-  }
-  .header .sub {
-    font-size: 12pt;
-    color: #555;
-  }
+      /* ---- Header ---- */
+      .header {
+        text-align: center;
+        margin-bottom: 28px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #111;
+      }
+      .header h1 {
+        font-size: 28pt;
+        font-weight: 950;
+        letter-spacing: -0.5px;
+        margin-bottom: 4px;
+      }
+      .header .sub {
+        font-size: 12pt;
+        color: #555;
+      }
 
-  /* ---- Sections ---- */
-  section {
-    margin-bottom: 22px;
-  }
+      /* ---- Sections ---- */
+      section {
+        margin-bottom: 22px;
+      }
 
-  h2 {
-    font-size: 15pt;
-    font-weight: 900;
-    margin-bottom: 6px;
-    color: #111;
-  }
+      h2 {
+        font-size: 15pt;
+        font-weight: 900;
+        margin-bottom: 6px;
+        color: #111;
+      }
 
-  p, li {
-    font-size: 12.5pt;
-    color: #333;
-  }
+      p,
+      li {
+        font-size: 12.5pt;
+        color: #333;
+      }
 
-  p + p {
-    margin-top: 8px;
-  }
+      p + p {
+        margin-top: 8px;
+      }
 
-  ul, ol {
-    padding-left: 22px;
-    margin-top: 6px;
-  }
+      ul,
+      ol {
+        padding-left: 22px;
+        margin-top: 6px;
+      }
 
-  li {
-    margin-bottom: 5px;
-  }
+      li {
+        margin-bottom: 5px;
+      }
 
-  /* ---- Highlight box ---- */
-  .box {
-    background: #f4f4f4;
-    border-left: 4px solid #111;
-    padding: 14px 16px;
-    border-radius: 0 10px 10px 0;
-    margin: 10px 0;
-  }
+      /* ---- Highlight box ---- */
+      .box {
+        background: #f4f4f4;
+        border-left: 4px solid #111;
+        padding: 14px 16px;
+        border-radius: 0 10px 10px 0;
+        margin: 10px 0;
+      }
 
-  .box p {
-    font-size: 12pt;
-  }
+      .box p {
+        font-size: 12pt;
+      }
 
-  /* ---- Steps ---- */
-  .steps {
-    display: grid;
-    gap: 12px;
-    margin-top: 10px;
-    counter-reset: step;
-  }
+      /* ---- Steps ---- */
+      .steps {
+        display: grid;
+        gap: 12px;
+        margin-top: 10px;
+        counter-reset: step;
+      }
 
-  .step {
-    display: grid;
-    grid-template-columns: 36px 1fr;
-    gap: 10px;
-    align-items: start;
-  }
+      .step {
+        display: grid;
+        grid-template-columns: 36px 1fr;
+        gap: 10px;
+        align-items: start;
+      }
 
-  .step-num {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: #111;
-    color: white;
-    font-weight: 900;
-    font-size: 15pt;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
+      .step-num {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #111;
+        color: white;
+        font-weight: 900;
+        font-size: 15pt;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
 
-  .step-text {
-    padding-top: 6px;
-  }
+      .step-text {
+        padding-top: 6px;
+      }
 
-  .step-text strong {
-    display: block;
-    font-weight: 850;
-    font-size: 12.5pt;
-    margin-bottom: 2px;
-  }
+      .step-text strong {
+        display: block;
+        font-weight: 850;
+        font-size: 12.5pt;
+        margin-bottom: 2px;
+      }
 
-  .step-text span {
-    font-size: 11.5pt;
-    color: #555;
-  }
+      .step-text span {
+        font-size: 11.5pt;
+        color: #555;
+      }
 
-  /* ---- Timeline ---- */
-  .timeline {
-    margin-top: 10px;
-  }
+      /* ---- Timeline ---- */
+      .timeline {
+        margin-top: 10px;
+      }
 
-  .timeline-item {
-    display: grid;
-    grid-template-columns: 12px 1fr;
-    gap: 12px;
-    padding-bottom: 14px;
-    position: relative;
-  }
+      .timeline-item {
+        display: grid;
+        grid-template-columns: 12px 1fr;
+        gap: 12px;
+        padding-bottom: 14px;
+        position: relative;
+      }
 
-  .timeline-item:not(:last-child)::before {
-    content: "";
-    position: absolute;
-    left: 5px;
-    top: 18px;
-    bottom: 0;
-    width: 2px;
-    background: #ccc;
-  }
+      .timeline-item:not(:last-child)::before {
+        content: "";
+        position: absolute;
+        left: 5px;
+        top: 18px;
+        bottom: 0;
+        width: 2px;
+        background: #ccc;
+      }
 
-  .timeline-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #111;
-    margin-top: 5px;
-  }
+      .timeline-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #111;
+        margin-top: 5px;
+      }
 
-  .timeline-content strong {
-    font-weight: 850;
-    font-size: 12.5pt;
-  }
+      .timeline-content strong {
+        font-weight: 850;
+        font-size: 12.5pt;
+      }
 
-  .timeline-content p {
-    font-size: 11.5pt;
-    color: #555;
-    margin-top: 2px;
-  }
+      .timeline-content p {
+        font-size: 11.5pt;
+        color: #555;
+        margin-top: 2px;
+      }
 
-  /* ---- QR placeholder ---- */
-  .qr-area {
-    text-align: center;
-    margin: 20px 0;
-    padding: 20px;
-    border: 1px solid #e0e0e0;
-    border-radius: 16px;
-    background: #fafafa;
-  }
+      /* ---- QR placeholder ---- */
+      .qr-area {
+        text-align: center;
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #e0e0e0;
+        border-radius: 16px;
+        background: #fafafa;
+      }
 
-  .qr-area .label {
-    font-size: 11pt;
-    color: #888;
-    margin-top: 8px;
-  }
+      .qr-area .label {
+        font-size: 11pt;
+        color: #888;
+        margin-top: 8px;
+      }
 
-  .qr-placeholder {
-    width: 140px;
-    height: 140px;
-    background: #f0f0f0;
-    border-radius: 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11pt;
-    color: #aaa;
-  }
+      .qr-placeholder {
+        width: 140px;
+        height: 140px;
+        background: #f0f0f0;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11pt;
+        color: #aaa;
+      }
 
-  /* ---- Footer ---- */
-  .footer {
-    margin-top: 28px;
-    padding-top: 16px;
-    border-top: 1px solid #ddd;
-    text-align: center;
-    font-size: 10.5pt;
-    color: #888;
-  }
-</style>
-</head>
-<body>
-
-<div class="header">
-  <h1>RaumVote</h1>
-  <div class="sub">Deine Stimme für die Zukunft unserer Gemeinde</div>
-</div>
-
-<section>
-  <h2>Was ist RaumVote?</h2>
-  <p>
-    RaumVote ist eine digitale Abstimmungsplattform, mit der du mitbestimmen kannst,
-    wie sich unsere Gemeinde räumlich weiterentwickeln soll. Dir werden verschiedene
-    Gestaltungsvorschläge als Bilder präsentiert — du wischst dich durch und wählst
-    am Ende deinen Favoriten.
-  </p>
-  <p>
-    Jede Stimme zählt gleich viel. Die Ergebnisse fliessen direkt in die
-    Gemeindeversammlung ein.
-  </p>
-</section>
-
-<section>
-  <h2>So funktioniert's</h2>
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div class="step-text">
-        <strong>QR-Code scannen</strong>
-        <span>Scanne den beiliegenden QR-Code mit deiner Handy-Kamera. Du wirst automatisch eingeloggt.</span>
-      </div>
+      /* ---- Footer ---- */
+      .footer {
+        margin-top: 28px;
+        padding-top: 16px;
+        border-top: 1px solid #ddd;
+        text-align: center;
+        font-size: 10.5pt;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>RaumVote</h1>
+      <div class="sub">Deine Stimme für die Zukunft unserer Gemeinde</div>
     </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div class="step-text">
-        <strong>Vorschläge vergleichen</strong>
-        <span>Dir werden jeweils zwei Optionen nebeneinander angezeigt. Tippe auf die, die dir besser gefällt. So arbeitest du dich durch den Entscheidungsbaum.</span>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-text">
-        <strong>Abstimmen</strong>
-        <span>Am Ende landest du bei deinem Favoriten. Deine Stimme wird automatisch gezählt. Du kannst deine Wahl jederzeit ändern.</span>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">4</div>
-      <div class="step-text">
-        <strong>Kommentieren &amp; liken</strong>
-        <span>Du kannst Vorschläge kommentieren und liken, um deine Meinung mitzuteilen.</span>
-      </div>
-    </div>
-  </div>
-</section>
 
-<section>
-  <h2>Abstimmungszeitraum</h2>
-  <div class="box">
-    <p>
-      <strong>Die Abstimmung läuft 30 Tage</strong> ab dem Datum der Zustellung dieses Schreibens.
-      Du kannst deine Stimme in diesem Zeitraum jederzeit abgeben oder ändern.
-    </p>
-  </div>
-  <p>
-    Nach Ablauf der Frist werden keine neuen Stimmen mehr angenommen und die
-    Ergebnisse ausgewertet.
-  </p>
-</section>
+    <section>
+      <h2>Was ist RaumVote?</h2>
+      <p>
+        RaumVote ist eine digitale Abstimmungsplattform, mit der du mitbestimmen kannst, wie sich unsere Gemeinde
+        räumlich weiterentwickeln soll. Dir werden verschiedene Gestaltungsvorschläge als Bilder präsentiert — du
+        wischst dich durch und wählst am Ende deinen Favoriten.
+      </p>
+      <p>Jede Stimme zählt gleich viel. Die Ergebnisse fliessen direkt in die Gemeindeversammlung ein.</p>
+    </section>
 
-<section>
-  <h2>Was passiert danach?</h2>
-  <div class="timeline">
-    <div class="timeline-item">
-      <div class="timeline-dot"></div>
-      <div class="timeline-content">
-        <strong>Top 5 werden ermittelt</strong>
-        <p>Die fünf Vorschläge mit den meisten Stimmen werden ausgewählt.</p>
+    <section>
+      <h2>So funktioniert's</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <strong>QR-Code scannen</strong>
+            <span>Scanne den beiliegenden QR-Code mit deiner Handy-Kamera. Du wirst automatisch eingeloggt.</span>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <strong>Vorschläge vergleichen</strong>
+            <span
+              >Dir werden jeweils zwei Optionen nebeneinander angezeigt. Tippe auf die, die dir besser gefällt. So
+              arbeitest du dich durch den Entscheidungsbaum.</span
+            >
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            <strong>Abstimmen</strong>
+            <span
+              >Am Ende landest du bei deinem Favoriten. Deine Stimme wird automatisch gezählt. Du kannst deine Wahl
+              jederzeit ändern.</span
+            >
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-text">
+            <strong>Kommentieren &amp; liken</strong>
+            <span>Du kannst Vorschläge kommentieren und liken, um deine Meinung mitzuteilen.</span>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="timeline-item">
-      <div class="timeline-dot"></div>
-      <div class="timeline-content">
-        <strong>Gemeindeversammlung</strong>
-        <p>Die Top 5 werden der Gemeindeversammlung vorgelegt. Dort wird abgestimmt, welcher Vorschlag vom Planungsbüro ausgearbeitet werden soll.</p>
-      </div>
-    </div>
-    <div class="timeline-item">
-      <div class="timeline-dot"></div>
-      <div class="timeline-content">
-        <strong>Planung &amp; Ausarbeitung</strong>
-        <p>Das Planungsbüro erarbeitet den gewählten Vorschlag im Detail.</p>
-      </div>
-    </div>
-    <div class="timeline-item">
-      <div class="timeline-dot"></div>
-      <div class="timeline-content">
-        <strong>Budgetfreigabe</strong>
-        <p>Zum Schluss wird das Budget von der stimmberechtigten Bevölkerung freigegeben.</p>
-      </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<section>
-  <h2>Dein persönlicher QR-Code</h2>
-  <div class="qr-area">
-    <div class="qr-placeholder">QR-Code</div>
-    <div class="label">Scanne diesen Code mit deiner Handy-Kamera</div>
-  </div>
-  <p style="font-size: 11pt; color: #888; text-align: center;">
-    Dieser QR-Code ist einmalig und persönlich. Bitte nicht weitergeben.
-  </p>
-</section>
+    <section>
+      <h2>Abstimmungszeitraum</h2>
+      <div class="box">
+        <p>
+          <strong>Die Abstimmung läuft 30 Tage</strong> ab dem Datum der Zustellung dieses Schreibens. Du kannst deine
+          Stimme in diesem Zeitraum jederzeit abgeben oder ändern.
+        </p>
+      </div>
+      <p>Nach Ablauf der Frist werden keine neuen Stimmen mehr angenommen und die Ergebnisse ausgewertet.</p>
+    </section>
 
-<div class="footer">
-  RaumVote — Ein Projekt der Gemeinde im Toggenburg<br>
-  Bei Fragen wende dich an die Gemeindeverwaltung.
-</div>
+    <section>
+      <h2>Was passiert danach?</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <strong>Top 5 werden ermittelt</strong>
+            <p>Die fünf Vorschläge mit den meisten Stimmen werden ausgewählt.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <strong>Gemeindeversammlung</strong>
+            <p>
+              Die Top 5 werden der Gemeindeversammlung vorgelegt. Dort wird abgestimmt, welcher Vorschlag vom
+              Planungsbüro ausgearbeitet werden soll.
+            </p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <strong>Planung &amp; Ausarbeitung</strong>
+            <p>Das Planungsbüro erarbeitet den gewählten Vorschlag im Detail.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <strong>Budgetfreigabe</strong>
+            <p>Zum Schluss wird das Budget von der stimmberechtigten Bevölkerung freigegeben.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-</body>
+    <section>
+      <h2>Dein persönlicher QR-Code</h2>
+      <div class="qr-area">
+        <div class="qr-placeholder">QR-Code</div>
+        <div class="label">Scanne diesen Code mit deiner Handy-Kamera</div>
+      </div>
+      <p style="font-size: 11pt; color: #888; text-align: center">
+        Dieser QR-Code ist einmalig und persönlich. Bitte nicht weitergeben.
+      </p>
+    </section>
+
+    <div class="footer">
+      RaumVote — Ein Projekt der Gemeinde im Toggenburg<br />
+      Bei Fragen wende dich an die Gemeindeverwaltung.
+    </div>
+  </body>
 </html>

@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   if (!sessionId || !rootTitel || !rootBeschreibung) {
     return NextResponse.json(
       { error: "Missing required fields: sessionId, rootTitel, rootBeschreibung" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -53,9 +53,6 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json(
-      { error: "Failed to reset tree", details: message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to reset tree", details: message }, { status: 500 });
   }
 }

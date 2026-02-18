@@ -6,7 +6,9 @@ export const revalidate = 0;
 
 export default function EndPage() {
   return (
-    <Suspense fallback={<div style={{ padding: 16, color: "white", background: "black", height: "100dvh" }}>Loading…</div>}>
+    <Suspense
+      fallback={<div style={{ padding: 16, color: "white", background: "black", height: "100dvh" }}>Loading…</div>}
+    >
       <EndClient />
     </Suspense>
   );
