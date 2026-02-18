@@ -110,6 +110,29 @@ export async function PATCH(req: Request) {
 
   // State transitions
   if (action) {
+    // Special action: set-default (activate an archived session, archive the current active one)
+    if (action === "set-default") {
+      if (session.status !== "archived") {
+        return NextResponse.json({ error: "Nur archivierte Sessions können als Standard gesetzt werden" }, { status: 409 });
+      }
+
+      const updated = await prisma.$transaction(async (tx) => {
+        // Archive any currently active session
+        await tx.votingSession.updateMany({
+          where: { status: "active" },
+          data: { status: "archived", endedAt: new Date() },
+        });
+
+        // Reactivate the target session
+        return tx.votingSession.update({
+          where: { id },
+          data: { status: "active", startedAt: new Date(), endedAt: null },
+        });
+      });
+
+      return NextResponse.json({ session: updated });
+    }
+
     const transitions: Record<string, { from: string[]; to: string; extra: Record<string, unknown> }> = {
       start:   { from: ["draft"],  to: "active",   extra: { startedAt: new Date() } },
       archive: { from: ["active"], to: "archived", extra: { endedAt: new Date() } },

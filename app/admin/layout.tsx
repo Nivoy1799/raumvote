@@ -12,8 +12,10 @@ const sections = [
   { key: "tokens", path: "/admin/tokens", label: "Tokens" },
 ];
 
+const statusColors: Record<string, string> = { draft: "rgba(255,255,255,0.6)", active: "rgba(96,165,250,1)", archived: "rgba(74,222,128,1)" };
+
 function AdminShell({ children }: { children: React.ReactNode }) {
-  const { secret, setSecret, authed, setAuthed, setTokens, error: ctxError, setError } = useAdmin();
+  const { secret, setSecret, authed, setAuthed, setTokens, sessions, currentSession, selectedSessionId, setSelectedSessionId, error: ctxError, setError } = useAdmin();
   const [loginError, setLoginError] = useState("");
   const pathname = usePathname();
   const router = useRouter();
@@ -72,6 +74,32 @@ function AdminShell({ children }: { children: React.ReactNode }) {
             {sec.label}
           </button>
         ))}
+        {sessions.length > 1 && (
+          <select
+            value={selectedSessionId ?? ""}
+            onChange={(e) => setSelectedSessionId(e.target.value || null)}
+            style={{
+              marginLeft: "auto",
+              padding: "4px 8px",
+              borderRadius: 8,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(0,0,0,0.5)",
+              color: "white",
+              fontSize: 11,
+              fontWeight: 800,
+              cursor: "pointer",
+              outline: "none",
+              maxWidth: 180,
+            }}
+          >
+            <option value="">Aktive Session</option>
+            {sessions.map((sess) => (
+              <option key={sess.id} value={sess.id} style={{ color: statusColors[sess.status] }}>
+                {sess.title || sess.treeId} ({sess.status === "active" ? "Aktiv" : sess.status === "draft" ? "Entwurf" : "Archiv"})
+              </option>
+            ))}
+          </select>
+        )}
       </nav>
 
       <div style={{ ...s.container, ...(isWide ? { width: "min(1100px, 100vw)" } : {}) }}>

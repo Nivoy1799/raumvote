@@ -6,9 +6,12 @@ import { s } from "../styles";
 
 export default function SessionPage() {
   const {
-    currentSession, archivedSessions, headers, reloadSessions,
+    sessions, currentSession, selectedSessionId, setSelectedSessionId,
+    headers, reloadSessions,
     loading, setLoading, saving, setSaving, error, setError, now, secret,
   } = useAdmin();
+
+  const otherSessions = sessions.filter((s) => s.id !== currentSession?.id);
 
   // Create form
   const [showCreateSession, setShowCreateSession] = useState(false);
@@ -83,6 +86,19 @@ export default function SessionPage() {
     if (!confirm("Entwurf löschen?")) return;
     await fetch("/api/admin/session", { method: "DELETE", headers: headers(), body: JSON.stringify({ id }) });
     await reloadSessions();
+  }
+
+  async function setAsDefault(id: string) {
+    if (!confirm("Diese Session als aktive Standard-Session für Benutzer setzen? Die aktuell aktive Session wird archiviert.")) return;
+    setSaving(true);
+    const res = await fetch("/api/admin/session", { method: "PATCH", headers: headers(), body: JSON.stringify({ id, action: "set-default" }) });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setError(data?.error ?? "Fehler beim Setzen als Standard");
+    }
+    setSelectedSessionId(null);
+    await reloadSessions();
+    setSaving(false);
   }
 
   async function saveSessionConfig() {
@@ -235,7 +251,7 @@ export default function SessionPage() {
             <div style={s.countdown}>
               {sessionRemaining(currentSession) > 0 ? `Noch ${formatCountdown(sessionRemaining(currentSession))}` : "Zeit abgelaufen"}
               <span style={s.deadlineText}>
-                Deadline: {sessionDeadline(currentSession)?.toLocaleDateString("de", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                Deadline: {sessionDeadline(currentSession)?.toLocaleString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
               </span>
             </div>
           )}
@@ -249,6 +265,9 @@ export default function SessionPage() {
             )}
             {currentSession.status === "active" && (
               <button style={{ ...s.btnSmall, background: "rgba(74,222,128,0.2)" }} onClick={() => sessionAction(currentSession.id, "archive")}>Archivieren</button>
+            )}
+            {currentSession.status === "archived" && (
+              <button style={{ ...s.btnSmall, background: "rgba(96,165,250,0.2)" }} onClick={() => setAsDefault(currentSession.id)} disabled={saving}>Als Standard setzen (Aktivieren)</button>
             )}
           </div>
 
@@ -344,15 +363,26 @@ export default function SessionPage() {
         </div>
       )}
 
-      {archivedSessions.length > 0 && (
+      {otherSessions.length > 0 && (
         <div style={{ marginTop: 14 }}>
-          <div style={{ fontSize: 12, opacity: 0.5, marginBottom: 6 }}>Archivierte Sessions</div>
-          {archivedSessions.map((sess) => (
-            <div key={sess.id} style={s.sessionPast}>
+          <div style={{ fontSize: 12, opacity: 0.5, marginBottom: 6 }}>Alle Sessions</div>
+          {otherSessions.map((sess) => (
+            <div
+              key={sess.id}
+              onClick={() => setSelectedSessionId(sess.id)}
+              style={{
+                ...s.sessionPast,
+                cursor: "pointer",
+                borderRadius: 10,
+                padding: "8px 10px",
+                background: selectedSessionId === sess.id ? "rgba(96,165,250,0.1)" : "transparent",
+                transition: "background 0.15s",
+              }}
+            >
               <span style={{ ...s.statusBadge, color: statusColor[sess.status] }}>{statusLabel[sess.status]}</span>
               <span style={{ fontWeight: 800, fontSize: 13 }}>{sess.title || sess.treeId}</span>
               <span style={{ opacity: 0.5, fontSize: 11 }}>{sess._count.nodes} Knoten · {sess._count.votes} Stimmen</span>
-              <span style={{ opacity: 0.5, fontSize: 11 }}>{sess.endedAt ? new Date(sess.endedAt).toLocaleDateString("de") : "\u2014"}</span>
+              <span style={{ opacity: 0.5, fontSize: 11 }}>{sess.endedAt ? new Date(sess.endedAt).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" }) : "\u2014"}</span>
             </div>
           ))}
         </div>

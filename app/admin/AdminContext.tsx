@@ -37,7 +37,8 @@ type AdminContextType = {
   setAuthed: (a: boolean) => void;
   sessions: Session[];
   currentSession: Session | null;
-  archivedSessions: Session[];
+  selectedSessionId: string | null;
+  setSelectedSessionId: (id: string | null) => void;
   reloadSessions: () => Promise<void>;
   tokens: Token[];
   setTokens: (t: Token[]) => void;
@@ -69,14 +70,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   const headers = useCallback(
     () => ({ "content-type": "application/json", authorization: `Bearer ${secret}` }),
     [secret],
   );
 
-  const currentSession = sessions.find((s) => s.status === "active" || s.status === "draft") ?? null;
-  const archivedSessions = sessions.filter((s) => s.status === "archived");
+  // If a session is explicitly selected, use it; otherwise default to active/draft
+  const currentSession = selectedSessionId
+    ? sessions.find((s) => s.id === selectedSessionId) ?? null
+    : sessions.find((s) => s.status === "active" || s.status === "draft") ?? null;
 
   // Auto-login from sessionStorage
   useEffect(() => {
@@ -121,7 +125,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   return (
     <AdminContext.Provider value={{
       secret, setSecret, authed, setAuthed,
-      sessions, currentSession, archivedSessions, reloadSessions,
+      sessions, currentSession, selectedSessionId, setSelectedSessionId, reloadSessions,
       tokens, setTokens, reloadTokens,
       headers, error, setError, loading, setLoading, saving, setSaving, now,
     }}>
