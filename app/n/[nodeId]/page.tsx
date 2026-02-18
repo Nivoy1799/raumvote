@@ -227,6 +227,11 @@ export default function NodePage() {
           setGenerating(false);
           if (err?.status === 403) setDiscoveryDisabled(true);
         });
+      } else if (data.node.generated && !data.node.discoveredAt && voterId) {
+        // Pre-generated but undiscovered — first human visitor gets discovery reveal
+        setIsDiscoverer(true);
+        setRevealNode(data.node);
+        setShowReveal(true);
       }
     });
   }, [nodeId, voterId]);
@@ -368,6 +373,14 @@ export default function NodePage() {
     setShowReveal(false);
   }
 
+  function handleLater() {
+    // Also mark as discovered so the card doesn't show again on revisit
+    if (voterId && revealNode) {
+      discoverNode(revealNode.id, voterId);
+    }
+    setShowReveal(false);
+  }
+
   // Determine discovery reveal variant
   const revealVariant: DiscoveryVariant = (() => {
     if (!revealNode) return "new";
@@ -429,11 +442,11 @@ export default function NodePage() {
 
       // Portrait mode: based on activeCard state
       if (activeCard === null) {
-        // Center view: arrow keys to focus cards
-        if (key === "arrowright") {
+        // Center view: arrow keys to focus cards (0=left card, 1=right card)
+        if (key === "arrowleft") {
           e.preventDefault();
           setActiveCard(0);
-        } else if (key === "arrowleft") {
+        } else if (key === "arrowright") {
           e.preventDefault();
           setActiveCard(1);
         }
@@ -460,12 +473,12 @@ export default function NodePage() {
         } else if (key === "s") {
           e.preventDefault();
           shareOption(focusedOptionId);
-        } else if (key === "arrowleft" && activeCard === 0) {
-          e.preventDefault();
-          setActiveCard(1);
-        } else if (key === "arrowright" && activeCard === 1) {
+        } else if (key === "arrowleft" && activeCard === 1) {
           e.preventDefault();
           setActiveCard(0);
+        } else if (key === "arrowright" && activeCard === 0) {
+          e.preventDefault();
+          setActiveCard(1);
         }
       }
     };
@@ -987,7 +1000,7 @@ export default function NodePage() {
             variant={revealVariant}
             totalPaths={totalNodes}
             onExplore={handleExplore}
-            onLater={() => setShowReveal(false)}
+            onLater={handleLater}
           />
         )}
 
@@ -1191,7 +1204,7 @@ export default function NodePage() {
           variant={revealVariant}
           totalPaths={totalNodes}
           onExplore={handleExplore}
-          onLater={() => setShowReveal(false)}
+          onLater={handleLater}
         />
       )}
 

@@ -115,14 +115,21 @@ export function DiscoveryRevealCard({
   const contentOpacity = useTransform(y, [-150, 0, 150], [0.5, 1, 0.5]);
   const bgScale = useTransform(y, [-200, 0, 200], [1.05, 1, 0.97]);
 
-  // Keyboard dismiss
+  // Keyboard navigation: Enter/ArrowUp = explore, Escape/ArrowDown = later
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onLater();
+      if (exiting) return;
+      if (e.key === "Enter" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setExiting("explore");
+      } else if (e.key === "Escape" || e.key === "ArrowDown") {
+        e.preventDefault();
+        setExiting("later");
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onLater]);
+  }, [exiting]);
 
   const handleDragEnd = useCallback(
     (_: unknown, info: PanInfo) => {
@@ -391,7 +398,7 @@ export function DiscoveryRevealCard({
             >
               <path d="M12 4l-6 6h12l-6-6z" fill="white" />
             </svg>
-            Nach oben wischen
+            Nach oben wischen / Enter
           </motion.div>
         )}
 
@@ -414,7 +421,7 @@ export function DiscoveryRevealCard({
             marginTop: 4,
           }}
         >
-          Sp\u00e4ter erkunden
+          Realität erkunden
         </motion.button>
 
         {/* Visually hidden explore button for screen readers / keyboard */}
