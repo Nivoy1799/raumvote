@@ -398,7 +398,7 @@ export default function MePage() {
                         <div style={{ fontSize: r.fontSize.body, fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{n.titel}</div>
                         <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{n.beschreibung}</div>
                         <div style={{ fontSize: r.fontSize.small - 1, opacity: 0.4, marginTop: 2 }}>
-                          Tiefe {n.depth} &middot; {new Date(like.createdAt).toLocaleDateString("de")}
+                          Tiefe {n.depth} &middot; {new Date(like.createdAt).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" })}
                         </div>
                       </div>
                     </button>
@@ -457,7 +457,7 @@ export default function MePage() {
                         <div style={{ fontSize: r.fontSize.body, fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{disc.titel}</div>
                         <div style={{ fontSize: r.fontSize.small, opacity: 0.7, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{disc.beschreibung}</div>
                         <div style={{ fontSize: r.fontSize.small - 1, opacity: 0.4, marginTop: 2 }}>
-                          Tiefe {disc.depth} &middot; ⭐ Entdeckt {new Date(disc.createdAt).toLocaleDateString("de")}
+                          Tiefe {disc.depth} &middot; ⭐ Entdeckt {new Date(disc.createdAt).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" })}
                         </div>
                       </div>
                     </button>

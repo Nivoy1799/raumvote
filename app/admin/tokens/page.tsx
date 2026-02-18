@@ -155,7 +155,7 @@ export default function TokensPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={s.tokenLabel}>{t.label || "\u2014"}</div>
                     <div style={s.tokenCode}>{t.token.slice(0, 8)}...{t.token.slice(-6)}</div>
-                    <div style={s.tokenMeta}>{t.active ? "Aktiv" : "Gesperrt"} &middot; {new Date(t.createdAt).toLocaleDateString("de")}</div>
+                    <div style={s.tokenMeta}>{t.active ? "Aktiv" : "Gesperrt"} &middot; {new Date(t.createdAt).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" })}</div>
                   </div>
                   <div style={s.tokenActions}>
                     <button style={s.btnTiny} onClick={() => copyUrl(t.token)} title="URL kopieren">Link</button>

@@ -160,7 +160,7 @@ export default function ImagesPage() {
                   <div style={{ fontSize: 10, display: "flex", gap: 8, alignItems: "center", marginTop: 2 }}>
                     <span style={{ color: statusColors[task.status], fontWeight: 800 }}>{statusLabels[task.status]}</span>
                     {elapsed && <span style={{ opacity: 0.5 }}>{elapsed}</span>}
-                    <span style={{ opacity: 0.4 }}>{new Date(lastChanged).toLocaleString("de", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                    <span style={{ opacity: 0.4 }}>{new Date(lastChanged).toLocaleString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                     {task.error && <span style={{ color: "rgba(255,59,92,0.7)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.error.slice(0, 50)}</span>}
                   </div>
                 </div>

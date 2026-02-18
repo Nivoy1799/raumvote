@@ -125,7 +125,7 @@ function buildTree(nodes: TreeNodeFlat[], rootId: string | null): TreeViewNode |
 
 function formatDate(d: string | null): string {
   if (!d) return "\u2014";
-  return new Date(d).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return new Date(d).toLocaleString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 // ---------- Component ----------
