@@ -36,8 +36,8 @@ export default function LoginPage() {
       <main style={s.shell}>
         <div style={s.center}>
           <div style={s.icon}>&#x26D4;</div>
-          <div style={s.title}>Ungultiger Zugang</div>
-          <div style={s.sub}>Dieser Code ist ungultig oder wurde gesperrt.</div>
+          <div style={s.title}>Ungültiger Zugang</div>
+          <div style={s.sub}>Dieser Code ist ungültig oder wurde gesperrt.</div>
         </div>
       </main>
     );

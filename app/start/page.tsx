@@ -115,7 +115,7 @@ export default function StartPage() {
     >
       {!showWelcome && (
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: r.fontSize.title + 2, fontWeight: 900, marginBottom: 8 }}>Loading\u2026</div>
+          <div style={{ fontSize: r.fontSize.title + 2, fontWeight: 900, marginBottom: 8 }}>Loading</div>
         </div>
       )}
 
@@ -251,8 +251,8 @@ export default function StartPage() {
                 }}
               >
                 Diese App funktioniert in <strong style={{ color: "rgba(96,165,250,1)" }}>vertikaler</strong> und{" "}
-                <strong style={{ color: "rgba(139,92,246,1)" }}>horizontaler</strong> Ausrichtung. Drehe dein Handy
-                f\u00fcr eine andere Ansicht!
+                <strong style={{ color: "rgba(139,92,246,1)" }}>horizontaler</strong> Ausrichtung. Drehe dein Handy für
+                eine andere Ansicht!
               </div>
             </div>
 
@@ -298,9 +298,9 @@ export default function StartPage() {
                           strokeLinejoin="round"
                         />
                       </svg>
-                      ) und w\u00e4hle{" "}
-                      <strong style={{ color: "rgba(74,222,128,0.9)" }}>&quot;Zum Home-Bildschirm&quot;</strong>{" "}
-                      f\u00fcr die beste Erfahrung.
+                      ) und wähle{" "}
+                      <strong style={{ color: "rgba(74,222,128,0.9)" }}>&quot;Zum Home-Bildschirm&quot;</strong> für die
+                      beste Erfahrung.
                     </>
                   ) : (
                     <>Installiere RaumVote als App f\u00fcr schnelleren Zugriff und Vollbildmodus.</>

@@ -41,7 +41,7 @@ export default function TokensPage() {
   }
 
   async function deleteToken(t: { id: string; label: string | null; token: string }) {
-    if (!confirm(`Token "${t.label || t.token.slice(0, 8)}" wirklich loschen?`)) return;
+    if (!confirm(`Token "${t.label || t.token.slice(0, 8)}" wirklich löschen?`)) return;
     await fetch("/api/admin/tokens", { method: "DELETE", headers: headers(), body: JSON.stringify({ id: t.id }) });
     await reloadTokens();
   }
