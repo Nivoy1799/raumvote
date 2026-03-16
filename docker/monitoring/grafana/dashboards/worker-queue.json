@@ -1,0 +1,306 @@
+{
+  "uid": "raumvote-worker",
+  "title": "Worker & Queue",
+  "tags": ["raumvote", "worker"],
+  "timezone": "browser",
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Pending Jobs",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "red", "value": 20 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"app_metrics\")\n  |> filter(fn: (r) => r._field == \"jobs_pending\")\n  |> last()\n  |> yield(name: \"val\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Processing",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": null }]
+          }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"app_metrics\")\n  |> filter(fn: (r) => r._field == \"jobs_processing\")\n  |> last()\n  |> yield(name: \"val\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Failed Jobs",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 10, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"app_metrics\")\n  |> filter(fn: (r) => r._field == \"jobs_failed\")\n  |> last()\n  |> yield(name: \"val\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Pending Images",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 5, "x": 14, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "red", "value": 20 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"app_metrics\")\n  |> filter(fn: (r) => r._field == \"images_pending\")\n  |> last()\n  |> yield(name: \"val\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Generating",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "purple", "value": null }]
+          }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"app_metrics\")\n  |> filter(fn: (r) => r._field == \"images_generating\")\n  |> last()\n  |> yield(name: \"val\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Job Queue Depth",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 20, "lineWidth": 2, "stacking": { "mode": "normal" } }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "jobs_pending" },
+            "properties": [
+              { "id": "displayName", "value": "Pending" },
+              { "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "jobs_processing" },
+            "properties": [
+              { "id": "displayName", "value": "Processing" },
+              { "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "jobs_completed" },
+            "properties": [
+              { "id": "displayName", "value": "Completed" },
+              { "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "jobs_failed" },
+            "properties": [
+              { "id": "displayName", "value": "Failed" },
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"app_metrics\")\n  |> filter(fn: (r) => r._field == \"jobs_pending\" or r._field == \"jobs_processing\" or r._field == \"jobs_completed\" or r._field == \"jobs_failed\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last)\n  |> yield(name: \"jobs\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Image Pipeline",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 20, "lineWidth": 2, "stacking": { "mode": "normal" } }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "images_pending" },
+            "properties": [
+              { "id": "displayName", "value": "Pending" },
+              { "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "images_generating" },
+            "properties": [
+              { "id": "displayName", "value": "Generating" },
+              { "id": "color", "value": { "fixedColor": "purple", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "images_completed" },
+            "properties": [
+              { "id": "displayName", "value": "Completed" },
+              { "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "images_failed" },
+            "properties": [
+              { "id": "displayName", "value": "Failed" },
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"app_metrics\")\n  |> filter(fn: (r) => r._field == \"images_pending\" or r._field == \"images_generating\" or r._field == \"images_completed\" or r._field == \"images_failed\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last)\n  |> yield(name: \"images\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Worker CPU",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": { "fillOpacity": 15, "lineWidth": 2 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 85 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"docker_container_cpu\")\n  |> filter(fn: (r) => r._field == \"usage_percent\")\n  |> filter(fn: (r) => r[\"com.docker.compose.service\"] == \"worker\")\n  |> keep(columns: [\"_time\", \"_value\", \"container_name\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean)\n  |> yield(name: \"cpu\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "title": "Worker Memory",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "fillOpacity": 15, "lineWidth": 2 }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"docker_container_mem\")\n  |> filter(fn: (r) => r._field == \"usage\")\n  |> filter(fn: (r) => r[\"com.docker.compose.service\"] == \"worker\")\n  |> keep(columns: [\"_time\", \"_value\", \"container_name\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean)\n  |> yield(name: \"mem\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "title": "Worker Logs",
+      "type": "logs",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 20 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "expr": "{service=\"worker\"}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "prettifyLogMessage": true
+      }
+    },
+    {
+      "id": 31,
+      "title": "Worker Errors",
+      "type": "logs",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "expr": "{service=\"worker\"} |~ \"(?i)(error|failed|exception|ECONNREFUSED|ETIMEDOUT)\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    }
+  ],
+  "schemaVersion": 39
+}

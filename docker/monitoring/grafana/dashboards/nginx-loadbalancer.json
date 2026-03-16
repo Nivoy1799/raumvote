@@ -1,0 +1,317 @@
+{
+  "uid": "raumvote-nginx",
+  "title": "Nginx Load Balancer",
+  "tags": ["raumvote", "nginx"],
+  "timezone": "browser",
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Active Connections",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 200 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"nginx\")\n  |> filter(fn: (r) => r._field == \"active\")\n  |> last()\n  |> yield(name: \"active\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Requests/sec",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "red", "value": 500 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -2m)\n  |> filter(fn: (r) => r._measurement == \"nginx\")\n  |> filter(fn: (r) => r._field == \"requests\")\n  |> derivative(unit: 1s, nonNegative: true)\n  |> last()\n  |> yield(name: \"rps\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Health Latency",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.3 },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"http_response\")\n  |> filter(fn: (r) => r._field == \"response_time\")\n  |> last()\n  |> yield(name: \"latency\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Reading / Writing / Waiting",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "options": { "graphMode": "none", "orientation": "horizontal" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": null }]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "reading" },
+            "properties": [{ "id": "displayName", "value": "Reading" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "writing" },
+            "properties": [{ "id": "displayName", "value": "Writing" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "waiting" },
+            "properties": [{ "id": "displayName", "value": "Waiting" }]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"nginx\")\n  |> filter(fn: (r) => r._field == \"reading\" or r._field == \"writing\" or r._field == \"waiting\")\n  |> last()\n  |> yield(name: \"states\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Requests / sec",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "fillOpacity": 25, "lineWidth": 2, "gradientMode": "scheme" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "red", "value": 500 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nginx\")\n  |> filter(fn: (r) => r._field == \"requests\")\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean)\n  |> yield(name: \"rps\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "HTTP Status Codes (from access logs)",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] },
+        "pieType": "donut",
+        "tooltip": { "mode": "single" }
+      },
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "{status=\"200\"}" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } },
+              { "id": "displayName", "value": "200 OK" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "{status=\"304\"}" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } },
+              { "id": "displayName", "value": "304 Not Modified" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "{status=\"404\"}" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } },
+              { "id": "displayName", "value": "404 Not Found" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "{status=\"500\"}" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
+              { "id": "displayName", "value": "500 Error" }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "sum by (status) (count_over_time({service=\"nginx\"} [$__range]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "title": "Response Time (from access logs)",
+      "description": "Request duration percentiles from nginx access logs parsed via Loki",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 12 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "fillOpacity": 10, "lineWidth": 2 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "red", "value": 2 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "avg_over_time({service=\"nginx\"} | json | unwrap request_time [$__interval])",
+          "legendFormat": "avg",
+          "refId": "A"
+        },
+        {
+          "expr": "quantile_over_time(0.95, {service=\"nginx\"} | json | unwrap request_time [$__interval]) by ()",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "quantile_over_time(0.99, {service=\"nginx\"} | json | unwrap request_time [$__interval]) by ()",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "title": "Active Connections Over Time",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 15, "lineWidth": 2 }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nginx\")\n  |> filter(fn: (r) => r._field == \"active\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last)\n  |> yield(name: \"active\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "title": "Connection States Over Time",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "stacking": { "mode": "normal" } }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nginx\")\n  |> filter(fn: (r) => r._field == \"reading\" or r._field == \"writing\" or r._field == \"waiting\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last)\n  |> yield(name: \"states\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "title": "Accepts & Handled / sec",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 28 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "fillOpacity": 10, "lineWidth": 2 }
+        }
+      },
+      "targets": [
+        {
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"nginx\")\n  |> filter(fn: (r) => r._field == \"accepts\" or r._field == \"handled\")\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean)\n  |> yield(name: \"ah\")",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "title": "Slow Requests (> 500ms)",
+      "description": "Requests taking more than 500ms from nginx access logs",
+      "type": "logs",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 28 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "expr": "{service=\"nginx\"} | json | request_time > 0.5",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    }
+  ],
+  "schemaVersion": 39
+}

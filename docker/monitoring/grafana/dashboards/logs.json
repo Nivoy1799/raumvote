@@ -1,0 +1,198 @@
+{
+  "uid": "raumvote-logs",
+  "title": "Logs",
+  "tags": ["raumvote", "logs"],
+  "timezone": "browser",
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "custom",
+        "current": { "text": "All", "value": "$__all" },
+        "options": [
+          { "text": "All", "value": "$__all", "selected": true },
+          { "text": "app", "value": "app", "selected": false },
+          { "text": "worker", "value": "worker", "selected": false },
+          { "text": "nginx", "value": "nginx", "selected": false }
+        ],
+        "includeAll": true,
+        "multi": true,
+        "query": "app,worker,nginx"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Log Volume",
+      "type": "barchart",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "expr": "sum by (service) (count_over_time({service=~\"$service\"} [1m]))",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "stacking": "normal"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Error Rate (lines/min)",
+      "description": "Log lines matching error patterns per minute",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 20, "lineWidth": 2, "gradientMode": "scheme" },
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (service) (count_over_time({service=~\"$service\"} |~ \"(?i)(error|exception|fatal|panic|ECONNREFUSED|ETIMEDOUT)\" [1m]))",
+          "legendFormat": "{{service}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "HTTP Status Distribution",
+      "description": "Status code breakdown from nginx access logs",
+      "type": "piechart",
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 6 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "values": ["value", "percent"] },
+        "pieType": "donut"
+      },
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "{status=\"200\"}" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } },
+              { "id": "displayName", "value": "200" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "{status=\"304\"}" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } },
+              { "id": "displayName", "value": "304" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "{status=\"404\"}" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } },
+              { "id": "displayName", "value": "404" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "{status=\"500\"}" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
+              { "id": "displayName", "value": "500" }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "sum by (status) (count_over_time({service=\"nginx\"} [$__range]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Slow Requests (> 500ms)",
+      "description": "Nginx requests taking more than 500ms",
+      "type": "logs",
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 6 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "expr": "{service=\"nginx\"} | json | request_time > 0.5",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 10,
+      "title": "Service Logs",
+      "type": "logs",
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 13 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "expr": "{service=~\"$service\"}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "prettifyLogMessage": true
+      }
+    },
+    {
+      "id": 20,
+      "title": "Errors Only",
+      "type": "logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 27 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "expr": "{service=~\"$service\"} |~ \"(?i)(error|exception|fatal|panic|ECONNREFUSED|ETIMEDOUT)\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 30,
+      "title": "Nginx Access Logs (4xx/5xx)",
+      "type": "logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 37 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "expr": "{service=\"nginx\"} | json | status >= 400",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    }
+  ],
+  "schemaVersion": 39
+}

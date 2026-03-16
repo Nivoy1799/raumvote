@@ -1,0 +1,91 @@
+services:
+  influxdb:
+    image: influxdb:2.7
+    restart: unless-stopped
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_ADMIN_USER:-admin}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_ADMIN_PASSWORD:-raumvote-monitoring}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG:-raumvote}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET:-metrics}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN:-raumvote-dev-token}
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  telegraf:
+    image: telegraf:1.32
+    restart: unless-stopped
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    environment:
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN:-raumvote-dev-token}
+      - INFLUXDB_ORG=${INFLUXDB_ORG:-raumvote}
+      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET:-metrics}
+    volumes:
+      - ./docker/monitoring/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    user: "0:0"
+    entrypoint: ["/usr/bin/telegraf"]
+
+  loki:
+    image: grafana/loki:3.3.0
+    restart: unless-stopped
+    volumes:
+      - ./docker/monitoring/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  promtail:
+    image: grafana/promtail:3.3.0
+    restart: unless-stopped
+    depends_on:
+      loki:
+        condition: service_healthy
+    volumes:
+      - ./docker/monitoring/promtail.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-raumvote}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:${GRAFANA_PORT:-3001}
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN:-raumvote-dev-token}
+      - INFLUXDB_ORG=${INFLUXDB_ORG:-raumvote}
+      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET:-metrics}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/monitoring/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./docker/monitoring/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./docker/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+volumes:
+  influxdb-data:
+  grafana-data:
+  loki-data:
