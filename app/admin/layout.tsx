@@ -105,7 +105,6 @@ function AdminShell({ children }: { children: React.ReactNode }) {
 
   const activeKey = sections.find((sec) => pathname.startsWith(sec.path))?.key || "session";
   const activeLabel = sections.find((sec) => sec.key === activeKey)?.label || "Admin";
-  const isWide = activeKey === "nodes";
 
   function navigate(path: string) {
     router.push(path);
@@ -270,7 +269,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
           paddingTop: HEADER_H,
         }}
       >
-        <div style={{ ...s.container, ...(isWide ? { maxWidth: 1200 } : {}) }}>{children}</div>
+        <div style={{ ...s.container, maxWidth: 1200 }}>{children}</div>
       </div>
     </div>
   );
