@@ -643,11 +643,15 @@ export default function NodePage() {
         if (dx < -50) {
           setActiveCard(1);
           resetIdleTimer();
+        } else if (dx > 50) {
+          setActiveCard(null);
         }
       } else if (activeCard === 1) {
         if (dx > 50) {
           setActiveCard(0);
           resetIdleTimer();
+        } else if (dx < -50) {
+          setActiveCard(null);
         }
       }
     }
@@ -852,7 +856,8 @@ export default function NodePage() {
       activeCard === null ? `calc(-50% - ${trackGap / 2}px)` : activeCard === 0 ? "0%" : `calc(-100% - ${trackGap}px)`;
 
     const isFocused = activeCard !== null;
-    const contentOpacity = isFocused ? 1 : 0;
+    const headerOpacity = isFocused ? 1 : 0.85;
+    const overlayOpacity = isFocused ? 1 : 0;
 
     return (
       <main style={styles.shell}>
@@ -890,7 +895,7 @@ export default function NodePage() {
             style={{
               ...styles.top,
               zIndex: 10,
-              opacity: contentOpacity,
+              opacity: headerOpacity,
               transition: "opacity 0.4s ease",
               pointerEvents: isFocused ? "auto" : "none",
             }}
@@ -1085,26 +1090,6 @@ export default function NodePage() {
                   </div>
                 )}
 
-                {/* Title label — always visible as a small tag in center mode */}
-                {!isFocused && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: 16,
-                      left: 12,
-                      right: 12,
-                      textAlign: "center",
-                      color: "white",
-                      fontSize: r.fontSize.body,
-                      fontWeight: 900,
-                      textShadow: "0 2px 8px rgba(0,0,0,0.8)",
-                      pointerEvents: "none",
-                    }}
-                  >
-                    {opt.titel}
-                  </div>
-                )}
-
                 {/* Bottom overlay — only visible when card is focused */}
                 <div
                   style={{
@@ -1117,7 +1102,7 @@ export default function NodePage() {
                     color: "white",
                     background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 100%)",
                     borderRadius: "0 0 24px 24px",
-                    opacity: contentOpacity,
+                    opacity: overlayOpacity,
                     transition: "opacity 0.4s ease",
                     pointerEvents: isFocused ? "auto" : "none",
                   }}
