@@ -13,6 +13,7 @@ import { processImageTaskById } from "@/lib/processImageTask";
  * Fire-and-forget safe — logs errors but never throws.
  */
 export function processJobsInBackground(sessionId: string): void {
+  if (process.env.VERCEL) return; // Worker on Railway handles these
   processSessionJobs(sessionId).catch((err) => {
     console.error("[processJobs] Background error:", err);
   });

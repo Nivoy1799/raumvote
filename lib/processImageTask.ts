@@ -74,9 +74,11 @@ export async function processImageTaskById(taskId: string): Promise<boolean> {
 
 /**
  * Fire-and-forget: process image tasks for the given IDs.
+ * Skipped on Vercel (10s timeout too short for image generation).
  * Logs errors but never throws — safe to call without awaiting.
  */
 export function processImageTasksInBackground(taskIds: string[]): void {
+  if (process.env.VERCEL) return; // Worker on Railway handles these
   Promise.all(taskIds.map((id) => processImageTaskById(id))).catch((err) => {
     console.error("[processImageTask] Background processing error:", err);
   });
