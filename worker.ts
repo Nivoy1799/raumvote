@@ -13,13 +13,34 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
 const connStr = process.env.DATABASE_URL || "";
+if (!connStr) {
+  console.error("[worker] FATAL: DATABASE_URL is not set");
+  process.exit(1);
+}
+
+// Mask password for logging
+const maskedUrl = connStr.replace(/:([^@]+)@/, ":***@");
+console.log("[worker] DATABASE_URL:", maskedUrl);
+
 const needsSsl = connStr.includes("neon.tech") || connStr.includes("sslmode=require");
+console.log("[worker] SSL enabled:", needsSsl);
 
 const pool = new Pool({
   connectionString: connStr,
   max: 5,
   ...(needsSsl ? { ssl: { rejectUnauthorized: false } } : {}),
 });
+
+// Test connection before starting
+pool
+  .query("SELECT 1")
+  .then(() => {
+    console.log("[worker] Database connection OK");
+  })
+  .catch((err) => {
+    console.error("[worker] FATAL: Database connection failed:", err.message);
+    process.exit(1);
+  });
 
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
