@@ -102,7 +102,13 @@ async function handlePreGeneration(payload: Record<string, unknown>) {
   const path: Array<{ titel: string; beschreibung: string; context: string; side: string | null }> = [];
   let currentId: string | null = nodeId;
   while (currentId) {
-    const found = await prisma.treeNode.findUnique({ where: { id: currentId } });
+    const found: {
+      titel: string;
+      beschreibung: string;
+      context: string;
+      side: string | null;
+      parentId: string | null;
+    } | null = await prisma.treeNode.findUnique({ where: { id: currentId } });
     if (!found) break;
     path.unshift({
       titel: found.titel,
