@@ -12,9 +12,13 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
+const connStr = process.env.DATABASE_URL || "";
+const needsSsl = connStr.includes("neon.tech") || connStr.includes("sslmode=require");
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: connStr,
   max: 5,
+  ...(needsSsl ? { ssl: { rejectUnauthorized: false } } : {}),
 });
 
 const adapter = new PrismaPg(pool);

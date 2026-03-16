@@ -6,9 +6,13 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
+const connStr = process.env.DATABASE_URL || "";
+const needsSsl = connStr.includes("neon.tech") || connStr.includes("sslmode=require");
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: connStr,
   max: parseInt(process.env.DB_POOL_SIZE || "10", 10),
+  ...(needsSsl ? { ssl: { rejectUnauthorized: false } } : {}),
 });
 
 const adapter = new PrismaPg(pool);
