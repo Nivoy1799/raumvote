@@ -6,6 +6,8 @@ import { generateTreeNodes } from "@/lib/openai";
 import type { EpisodeStep } from "@/lib/openai";
 import { checkR2Health } from "@/lib/r2";
 import { enqueue } from "@/lib/queue";
+import { processImageTasksInBackground } from "@/lib/processImageTask";
+import { processJobsInBackground } from "@/lib/processJobs";
 
 async function buildEpisode(nodeId: string): Promise<EpisodeStep[]> {
   const path: EpisodeStep[] = [];
@@ -178,13 +180,20 @@ export async function POST(req: Request) {
       return NextResponse.json(result);
     }
 
-    await prisma.imageTask.createMany({
+    const createdTasks = await prisma.imageTask.createManyAndReturn({
       data: [
         { sessionId: node.sessionId, nodeId: result.left.id, nodeTitel: result.left.titel, status: "pending" },
         { sessionId: node.sessionId, nodeId: result.right.id, nodeTitel: result.right.titel, status: "pending" },
       ],
     });
+
+    // Fire-and-forget: process images inline so they work without the Docker worker.
+    // If the worker is also running, the optimistic status check prevents double processing.
+    processImageTasksInBackground(createdTasks.map((t) => t.id));
   }
+
+  // Fire-and-forget: process pre-generation jobs inline (for non-Docker environments)
+  processJobsInBackground(node.sessionId);
 
   return NextResponse.json(result);
 }
