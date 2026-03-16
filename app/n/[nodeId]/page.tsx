@@ -4,7 +4,13 @@ import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { TreeNodeData } from "@/lib/tree.types";
-import { fetchActiveTreeMeta, fetchNodePage, generateChildren, discoverNode } from "@/lib/tree.client";
+import {
+  fetchActiveTreeMeta,
+  fetchNodePage,
+  generateChildren,
+  discoverNode,
+  prefetchGenerate,
+} from "@/lib/tree.client";
 import { useSwipeChoice } from "@/lib/useSwipeChoice";
 import { useTTS } from "@/lib/useTTS";
 
@@ -288,6 +294,26 @@ export default function NodePage() {
     }, 3000);
     return () => clearInterval(interval);
   }, [imagesLoading, skipImages, left?.id, right?.id]);
+
+  // Prefetch grandchildren: when current children are loaded, pre-generate their subtrees
+  // so the next navigation is instant (no "Generiere neue Realitäten" loading screen)
+  useEffect(() => {
+    if (!left || !right || !voterId) return;
+
+    async function prefetch(childId: string) {
+      const result = await prefetchGenerate(childId, voterId!);
+      if (!result) return;
+      // Preload grandchild images into browser cache
+      for (const child of [result.left, result.right]) {
+        if (child?.mediaUrl && !isPlaceholder(child.mediaUrl, phRef.current)) {
+          new window.Image().src = child.mediaUrl;
+        }
+      }
+    }
+
+    prefetch(left.id);
+    prefetch(right.id);
+  }, [left?.id, right?.id, voterId]);
 
   // Fetch interaction states (likes, votes, comments)
   useEffect(() => {

@@ -97,48 +97,60 @@ async function processImageTasks(): Promise<number> {
 
 // ── Job queue processing (pre-generation etc.) ──
 
+const JOB_BATCH_SIZE = 3; // Process up to 3 pre-gen jobs concurrently
+
 async function processJobQueue(): Promise<number> {
   const jobs = await prisma.$queryRaw<Array<{ id: string }>>`
     SELECT id FROM "JobQueue"
     WHERE status = 'pending' AND attempts < "maxAttempts"
     ORDER BY "createdAt" ASC
-    LIMIT 1
+    LIMIT ${JOB_BATCH_SIZE}
     FOR UPDATE SKIP LOCKED
   `;
 
   if (jobs.length === 0) return 0;
 
-  const job = await prisma.jobQueue.update({
-    where: { id: jobs[0].id },
-    data: { status: "processing", startedAt: new Date(), attempts: { increment: 1 } },
-  });
+  // Mark all as processing
+  const fullJobs = await Promise.all(
+    jobs.map((j) =>
+      prisma.jobQueue.update({
+        where: { id: j.id },
+        data: { status: "processing", startedAt: new Date(), attempts: { increment: 1 } },
+      }),
+    ),
+  );
 
-  try {
-    const payload = job.payload as Record<string, unknown>;
+  // Process all concurrently
+  await Promise.all(
+    fullJobs.map(async (job) => {
+      try {
+        const payload = job.payload as Record<string, unknown>;
 
-    if (job.type === "pre-generation") {
-      await handlePreGeneration(payload);
-    }
+        if (job.type === "pre-generation") {
+          await handlePreGeneration(payload);
+        }
 
-    await prisma.jobQueue.update({
-      where: { id: job.id },
-      data: { status: "completed", completedAt: new Date() },
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const canRetry = job.attempts < job.maxAttempts;
-    await prisma.jobQueue.update({
-      where: { id: job.id },
-      data: {
-        status: canRetry ? "pending" : "failed",
-        error: msg,
-        startedAt: null,
-        ...(canRetry ? {} : { completedAt: new Date() }),
-      },
-    });
-  }
+        await prisma.jobQueue.update({
+          where: { id: job.id },
+          data: { status: "completed", completedAt: new Date() },
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const canRetry = job.attempts < job.maxAttempts;
+        await prisma.jobQueue.update({
+          where: { id: job.id },
+          data: {
+            status: canRetry ? "pending" : "failed",
+            error: msg,
+            startedAt: null,
+            ...(canRetry ? {} : { completedAt: new Date() }),
+          },
+        });
+      }
+    }),
+  );
 
-  return 1;
+  return fullJobs.length;
 }
 
 // ── Pre-generation handler ──
@@ -256,8 +268,9 @@ async function pollLoop() {
 
   while (running) {
     try {
-      const images = await processImageTasks();
-      const jobs = await processJobQueue();
+      // Run image processing and pre-generation concurrently
+      // so slow image generation doesn't block node pre-generation
+      const [images, jobs] = await Promise.all([processImageTasks(), processJobQueue()]);
 
       if (images > 0 || jobs > 0) {
         console.log(`[worker] Processed ${images} image tasks, ${jobs} queue jobs`);

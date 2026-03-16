@@ -29,6 +29,25 @@ export async function fetchSingleNode(nodeId: string): Promise<TreeNodeData | nu
   return data.node ?? null;
 }
 
+/**
+ * Fire-and-forget: ensure a node's children are generated.
+ * If already generated, this is a fast no-op DB read.
+ * Returns the generate result for optional image preloading.
+ */
+export async function prefetchGenerate(nodeId: string, voterId: string): Promise<GenerateResult | null> {
+  try {
+    const res = await fetch("/api/tree/generate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ nodeId, voterId }),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function discoverNode(nodeId: string, voterId: string) {
   const res = await fetch("/api/tree/discover", {
     method: "POST",

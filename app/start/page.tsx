@@ -303,7 +303,7 @@ export default function StartPage() {
                       beste Erfahrung.
                     </>
                   ) : (
-                    <>Installiere RaumVote als App f\u00fcr schnelleren Zugriff und Vollbildmodus.</>
+                    <>Installiere RaumVote als App für schnelleren Zugriff und Vollbildmodus.</>
                   )}
                 </div>
                 {canInstall && (
