@@ -33,108 +33,6 @@ function isPlaceholder(url: string | null | undefined, placeholderUrl: string): 
   return !url || url === placeholderUrl || url === "/media/placeholder.jpg";
 }
 
-function ImageShimmer({ label }: { label: string }) {
-  return (
-    <>
-      <style>{`
-        @keyframes rv-shimmer {
-          0% { transform: translateX(-100%) rotate(15deg); }
-          100% { transform: translateX(200%) rotate(15deg); }
-        }
-        @keyframes rv-pulse {
-          0%, 100% { opacity: 0.25; }
-          50% { opacity: 0.5; }
-        }
-        @keyframes rv-dots {
-          0% { content: ''; }
-          25% { content: '.'; }
-          50% { content: '..'; }
-          75% { content: '...'; }
-        }
-        .rv-dots::after {
-          content: '';
-          animation: rv-dots 1.5s steps(1) infinite;
-        }
-      `}</style>
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 3,
-          overflow: "hidden",
-          pointerEvents: "none",
-        }}
-      >
-        {/* Dark pulsing overlay */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "radial-gradient(ellipse at center, rgba(100,60,255,0.15) 0%, rgba(0,0,0,0.6) 70%)",
-            animation: "rv-pulse 3s ease-in-out infinite",
-          }}
-        />
-        {/* Shimmer sweep */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: "-50%",
-              left: "-50%",
-              width: "60%",
-              height: "200%",
-              background:
-                "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 40%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 60%, transparent 100%)",
-              animation: "rv-shimmer 2.5s ease-in-out infinite",
-            }}
-          />
-        </div>
-        {/* Label */}
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              border: "2px solid rgba(255,255,255,0.3)",
-              borderTopColor: "rgba(255,255,255,0.8)",
-              animation: "rv-pulse 1s linear infinite",
-            }}
-          />
-          <span
-            className="rv-dots"
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: "rgba(255,255,255,0.7)",
-              textTransform: "uppercase",
-              letterSpacing: 1,
-            }}
-          >
-            {label}
-          </span>
-        </div>
-      </div>
-    </>
-  );
-}
-
 export default function NodePage() {
   const router = useRouter();
   const params = useParams<{ nodeId: string }>();
@@ -158,7 +56,6 @@ export default function NodePage() {
   const [isDiscoverer, setIsDiscoverer] = useState(false);
   const [totalNodes, setTotalNodes] = useState<number | undefined>(undefined);
   const [imagesLoading, setImagesLoading] = useState(false);
-  const [skipImages, setSkipImages] = useState(false);
 
   const [likedLeft, setLikedLeft] = useState(false);
   const [likedRight, setLikedRight] = useState(false);
@@ -192,13 +89,13 @@ export default function NodePage() {
 
   // Cycle generating messages
   useEffect(() => {
-    if (!generating) {
+    if (!generating && !imagesLoading) {
       setGenMsgIdx(0);
       return;
     }
     const iv = setInterval(() => setGenMsgIdx((i) => (i + 1) % GENERATING_MESSAGES.length), 2800);
     return () => clearInterval(iv);
-  }, [generating]);
+  }, [generating, imagesLoading]);
 
   // Stable ref for placeholderUrl to avoid dep issues
   const phRef = useRef(placeholderUrl);
@@ -267,7 +164,7 @@ export default function NodePage() {
 
   // Poll for image updates
   useEffect(() => {
-    if (!imagesLoading || skipImages || !left || !right) return;
+    if (!imagesLoading || !left || !right) return;
     const interval = setInterval(async () => {
       try {
         const res = await fetch(
@@ -293,7 +190,7 @@ export default function NodePage() {
       }
     }, 3000);
     return () => clearInterval(interval);
-  }, [imagesLoading, skipImages, left?.id, right?.id]);
+  }, [imagesLoading, left?.id, right?.id]);
 
   // Prefetch grandchildren: when current children are loaded, pre-generate their subtrees
   // so the next navigation is instant (no "Generiere neue Realitäten" loading screen)
@@ -664,8 +561,8 @@ export default function NodePage() {
     onPointerCancel: onCarouselPointerUp,
   };
 
-  // Loading state — AI text generation
-  if (!node || generating) {
+  // Loading state — AI text generation or waiting for images
+  if (!node || generating || imagesLoading) {
     return (
       <>
         <style>{`
@@ -721,7 +618,7 @@ export default function NodePage() {
               />
             </div>
             <div style={{ fontSize: r.fontSize.title, fontWeight: 900, marginBottom: 8 }}>
-              {generating ? GENERATING_MESSAGES[genMsgIdx] : "Loading"}
+              {generating || imagesLoading ? GENERATING_MESSAGES[genMsgIdx] : "Loading"}
             </div>
           </div>
         </div>
@@ -789,13 +686,11 @@ export default function NodePage() {
   const isMed = r.breakpoint === "medium";
   const leftIsPlaceholder = isPlaceholder(left.mediaUrl, placeholderUrl);
   const rightIsPlaceholder = isPlaceholder(right.mediaUrl, placeholderUrl);
-  const showShimmer = imagesLoading && !skipImages;
 
   const options = [left, right];
   const likedStates = [likedLeft, likedRight];
   const likeCounts = [likeCountLeft, likeCountRight];
   const commentCounts = [commentCountLeft, commentCountRight];
-  const placeholderStates = [leftIsPlaceholder, rightIsPlaceholder];
 
   const styles = {
     shell: {
@@ -900,34 +795,9 @@ export default function NodePage() {
               pointerEvents: isFocused ? "auto" : "none",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: r.fontSize.small, opacity: 0.7 }}>RaumVote • Depth {node.depth}</div>
-                <div style={{ fontSize: r.fontSize.button, fontWeight: 900 }}>{node.question}</div>
-              </div>
-              {showShimmer && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSkipImages(true);
-                  }}
-                  style={{
-                    background: "rgba(255,255,255,0.1)",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    borderRadius: 6,
-                    color: "rgba(255,255,255,0.7)",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    padding: "4px 10px",
-                    cursor: "pointer",
-                    flexShrink: 0,
-                    marginLeft: 8,
-                    marginTop: 2,
-                  }}
-                >
-                  Skip
-                </button>
-              )}
+            <div>
+              <div style={{ fontSize: r.fontSize.small, opacity: 0.7 }}>RaumVote • Depth {node.depth}</div>
+              <div style={{ fontSize: r.fontSize.button, fontWeight: 900 }}>{node.question}</div>
             </div>
           </header>
 
@@ -1054,8 +924,6 @@ export default function NodePage() {
                   priority
                   style={{ objectFit: "cover" }}
                 />
-                {showShimmer && placeholderStates[i] && <ImageShimmer label="Creating" />}
-
                 {/* Swipe-up hint — visible when card is focused, hidden after learned */}
                 {!swipeUpLearnedRef.current && isFocused && activeCard === i && (
                   <div
@@ -1316,34 +1184,9 @@ export default function NodePage() {
     <main style={styles.shell}>
       <div style={styles.frame} {...swipe.bind()}>
         <header style={styles.top}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: r.fontSize.small, opacity: 0.7 }}>RaumVote • Depth {node.depth}</div>
-              <div style={{ fontSize: r.fontSize.button, fontWeight: 900 }}>{node.question}</div>
-            </div>
-            {showShimmer && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSkipImages(true);
-                }}
-                style={{
-                  background: "rgba(255,255,255,0.1)",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  borderRadius: 6,
-                  color: "rgba(255,255,255,0.7)",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: "4px 10px",
-                  cursor: "pointer",
-                  flexShrink: 0,
-                  marginLeft: 8,
-                  marginTop: 2,
-                }}
-              >
-                Skip
-              </button>
-            )}
+          <div>
+            <div style={{ fontSize: r.fontSize.small, opacity: 0.7 }}>RaumVote • Depth {node.depth}</div>
+            <div style={{ fontSize: r.fontSize.button, fontWeight: 900 }}>{node.question}</div>
           </div>
         </header>
 
@@ -1357,7 +1200,6 @@ export default function NodePage() {
               priority
               style={{ objectFit: "cover" }}
             />
-            {showShimmer && leftIsPlaceholder && <ImageShimmer label="Creating" />}
             <div style={styles.overlay}>
               <div style={{ display: "flex", alignItems: "flex-end", gap: r.spacing.small }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1407,7 +1249,6 @@ export default function NodePage() {
               priority
               style={{ objectFit: "cover" }}
             />
-            {showShimmer && rightIsPlaceholder && <ImageShimmer label="Creating" />}
             <div style={styles.overlay}>
               <div style={{ display: "flex", alignItems: "flex-end", gap: r.spacing.small }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
