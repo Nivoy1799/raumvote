@@ -9,6 +9,7 @@ type ExportOption = {
   percentage: number;
   likes: number;
   comments: number;
+  mediaUrl: string | null;
 };
 
 type ExportData = {
@@ -24,53 +25,100 @@ type ExportData = {
   exportedAt: string;
 };
 
+/** Fetch an image URL and return a base64 data URL, or null on failure. */
+async function fetchImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+function drawBlackPage(doc: jsPDF) {
+  const pw = doc.internal.pageSize.getWidth();
+  const ph = doc.internal.pageSize.getHeight();
+  doc.setFillColor("#000000");
+  doc.rect(0, 0, pw, ph, "F");
+}
+
 export async function exportTop5Pdf(data: ExportData) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
-  const margin = 20;
+  const margin = 18;
   const contentW = pw - margin * 2;
-  let y = margin;
 
-  const colors = {
-    black: "#1a1a1a",
-    grey: "#666666",
-    lightGrey: "#999999",
-    accent: "#2563eb",
-    divider: "#e5e5e5",
-    rankBg: "#f3f4f6",
+  const c = {
+    white: "#ffffff",
+    textPrimary: "#f0f0f0",
+    textSecondary: "#a0a0a0",
+    textMuted: "#666666",
+    accent: "#60a5fa",
+    accentDim: "#3b82f6",
+    cardBg: "#111111",
+    cardBorder: "#222222",
+    barBg: "#1a1a1a",
+    barFill: "#60a5fa",
+    rankGold: "#fbbf24",
+    rankSilver: "#d1d5db",
+    rankBronze: "#f59e0b",
   };
 
-  // --- Header ---
+  const rankColors = [c.rankGold, c.rankSilver, c.rankBronze, c.accent, c.accent];
+
+  // Pre-fetch all images in parallel
+  const imagePromises = data.top5.map((opt) =>
+    opt.mediaUrl ? fetchImageAsBase64(opt.mediaUrl) : Promise.resolve(null),
+  );
+  const images = await Promise.all(imagePromises);
+
+  let y = margin;
+
+  // ── Page 1: Cover ──
+  drawBlackPage(doc);
+
+  // Subtle top accent line
+  doc.setFillColor(c.accent);
+  doc.rect(margin, margin, contentW, 0.8, "F");
+  y = margin + 8;
+
+  // RAUMVOTE branding
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.setTextColor(colors.accent);
+  doc.setFontSize(11);
+  doc.setTextColor(c.accent);
   doc.text("RAUMVOTE", margin, y);
 
-  doc.setTextColor(colors.lightGrey);
   doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(c.textMuted);
   doc.text("Abstimmungsergebnis", pw - margin, y, { align: "right" });
-  y += 12;
+  y += 20;
 
-  // --- Title ---
+  // Big title
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
-  doc.setTextColor(colors.black);
-  const title = data.session.title || "Top 5 — Entwurfsvorschläge";
+  doc.setFontSize(28);
+  doc.setTextColor(c.white);
+  const title = data.session.title || "Top 5";
   const titleLines = doc.splitTextToSize(title, contentW);
   doc.text(titleLines, margin, y);
-  y += titleLines.length * 9 + 2;
+  y += titleLines.length * 11 + 4;
 
   // Subtitle
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  doc.setTextColor(colors.grey);
-  doc.text("Die fünf meistgewählten Optionen zur Detailplanung", margin, y);
-  y += 10;
+  doc.setFontSize(13);
+  doc.setTextColor(c.textSecondary);
+  doc.text("Entwurfsvorschläge zur Detailplanung", margin, y);
+  y += 16;
 
-  // --- Meta info bar ---
-  doc.setFontSize(9);
-  doc.setTextColor(colors.lightGrey);
+  // Meta info cards
   const exportDate = new Date(data.exportedAt).toLocaleDateString("de-CH", {
     day: "2-digit",
     month: "2-digit",
@@ -84,107 +132,281 @@ export async function exportTop5Pdf(data: ExportData) {
       })
     : "—";
 
-  const metaLeft = `Exportiert: ${exportDate}  •  Session: ${data.session.id.slice(0, 12)}…`;
-  const metaRight = `Start: ${startDate}  •  Stimmen total: ${data.totalVotes}`;
-  doc.text(metaLeft, margin, y);
-  doc.text(metaRight, pw - margin, y, { align: "right" });
-  y += 4;
+  const metaItems = [
+    { label: "Stimmen total", value: String(data.totalVotes) },
+    { label: "Top Optionen", value: String(data.top5.length) },
+    { label: "Abstimmungsstart", value: startDate },
+    { label: "Export", value: exportDate },
+  ];
 
-  // Divider
-  doc.setDrawColor(colors.divider);
-  doc.setLineWidth(0.5);
-  doc.line(margin, y, pw - margin, y);
-  y += 10;
-
-  // --- Top 5 options ---
-  for (const opt of data.top5) {
-    // Check if we need a new page (need ~55mm for an entry)
-    if (y + 55 > ph - margin) {
-      doc.addPage();
-      y = margin;
-    }
-
-    // Rank circle
-    const circleX = margin + 6;
-    const circleY = y + 1;
-    doc.setFillColor(colors.rankBg);
-    doc.circle(circleX, circleY, 5, "F");
+  const metaW = (contentW - 6) / 4;
+  for (let i = 0; i < metaItems.length; i++) {
+    const mx = margin + i * (metaW + 2);
+    doc.setFillColor(c.cardBg);
+    doc.roundedRect(mx, y, metaW, 20, 3, 3, "F");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(c.textMuted);
+    doc.text(metaItems[i].label.toUpperCase(), mx + 5, y + 7);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-    doc.setTextColor(colors.black);
-    doc.text(String(opt.rank), circleX, circleY + 1, { align: "center" });
+    doc.setTextColor(c.white);
+    doc.text(metaItems[i].value, mx + 5, y + 15.5);
+  }
+  y += 30;
+
+  // Thin divider
+  doc.setFillColor(c.cardBorder);
+  doc.rect(margin, y, contentW, 0.3, "F");
+  y += 12;
+
+  // Compact overview list on cover
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(c.textMuted);
+  doc.text("ÜBERSICHT", margin, y);
+  y += 8;
+
+  for (let i = 0; i < data.top5.length; i++) {
+    const opt = data.top5[i];
+    const rowY = y;
+
+    // Rank number
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(rankColors[i]);
+    doc.text(String(opt.rank), margin + 2, rowY + 6);
 
     // Title
-    const titleX = margin + 16;
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(13);
-    doc.setTextColor(colors.black);
-    const optTitle = doc.splitTextToSize(opt.titel, contentW - 16);
-    doc.text(optTitle, titleX, y + 2);
-    y += optTitle.length * 5.5 + 3;
+    doc.setFontSize(12);
+    doc.setTextColor(c.white);
+    const overviewTitle = doc.splitTextToSize(opt.titel, contentW - 65);
+    doc.text(overviewTitle[0], margin + 14, rowY + 4);
 
-    // Stats line
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(colors.accent);
-    const statsText = `${opt.votes} Stimmen (${opt.percentage}%)  •  ${opt.likes} Likes  •  ${opt.comments} Kommentare`;
-    doc.text(statsText, titleX, y);
-    y += 6;
-
-    // Description
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(colors.grey);
-    const desc = doc.splitTextToSize(opt.beschreibung || "Keine Beschreibung", contentW - 16);
-    doc.text(desc, titleX, y);
-    y += desc.length * 4.5 + 3;
-
-    // Context (if present and different from description)
-    if (opt.context && opt.context !== opt.beschreibung) {
-      const ctxLabel = "Kontext: ";
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.setTextColor(colors.lightGrey);
-      doc.text(ctxLabel, titleX, y);
-      const labelW = doc.getTextWidth(ctxLabel);
-      doc.setFont("helvetica", "normal");
-      const ctxLines = doc.splitTextToSize(opt.context, contentW - 16 - labelW);
-      // Only print first 2 lines of context to keep it compact
-      const ctxTruncated = ctxLines.slice(0, 2);
-      doc.text(ctxTruncated, titleX + labelW, y);
-      y += ctxTruncated.length * 4 + 2;
+    // Vote bar
+    const barX = margin + 14;
+    const barW = contentW - 65;
+    const barY = rowY + 7;
+    doc.setFillColor(c.barBg);
+    doc.roundedRect(barX, barY, barW, 4, 2, 2, "F");
+    if (opt.percentage > 0) {
+      doc.setFillColor(rankColors[i]);
+      doc.roundedRect(barX, barY, Math.max(4, barW * (opt.percentage / 100)), 4, 2, 2, "F");
     }
 
-    // Divider between entries
-    y += 3;
-    doc.setDrawColor(colors.divider);
-    doc.setLineWidth(0.2);
-    doc.line(margin + 16, y, pw - margin, y);
-    y += 8;
+    // Vote count + percentage
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(c.white);
+    doc.text(`${opt.votes}`, pw - margin, rowY + 4, { align: "right" });
+    doc.setFontSize(8);
+    doc.setTextColor(c.textMuted);
+    doc.text(`${opt.percentage}%`, pw - margin, rowY + 10, { align: "right" });
+
+    y += 18;
   }
 
-  // --- Footer notes ---
-  if (y + 25 > ph - margin) {
+  // ── Detail pages: one per option ──
+  const imgW = 52;
+  const imgH = 69; // 3:4 ratio
+  const textAreaW = contentW - imgW - 10;
+
+  for (let i = 0; i < data.top5.length; i++) {
+    const opt = data.top5[i];
+    const imgData = images[i];
+
     doc.addPage();
+    drawBlackPage(doc);
     y = margin;
-  }
 
-  y += 5;
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(9);
-  doc.setTextColor(colors.lightGrey);
-  doc.text("Dieses Dokument wurde automatisch aus den RaumVote-Abstimmungsdaten generiert.", margin, y);
-  y += 5;
-  doc.text("Es dient als Grundlage für die Detailplanung durch das Architekturbüro.", margin, y);
+    // Top accent line
+    doc.setFillColor(rankColors[i]);
+    doc.rect(margin, y, contentW, 0.8, "F");
+    y += 6;
 
-  // Page number footer
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
+    // Small header
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.setTextColor(colors.lightGrey);
-    doc.text(`Seite ${i} von ${pageCount}`, pw / 2, ph - 10, { align: "center" });
+    doc.setTextColor(c.textMuted);
+    doc.text("RAUMVOTE", margin, y);
+    doc.text(`${opt.rank} / ${data.top5.length}`, pw - margin, y, { align: "right" });
+    y += 8;
+
+    // Rank badge
+    doc.setFillColor(rankColors[i]);
+    doc.roundedRect(margin, y, 22, 10, 3, 3, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor("#000000");
+    doc.text(`#${opt.rank}`, margin + 11, y + 7, { align: "center" });
+
+    // Stats next to badge
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(c.textSecondary);
+    doc.text(`${opt.votes} Stimmen  ·  ${opt.likes} Likes  ·  ${opt.comments} Kommentare`, margin + 26, y + 7);
+    y += 18;
+
+    // ── Title + Image row ──
+    const titleStartY = y;
+    const textX = margin;
+
+    // Title (left side, full width above image area if needed)
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(c.white);
+    const optTitleLines = doc.splitTextToSize(opt.titel, textAreaW);
+    doc.text(optTitleLines, textX, y + 6);
+    y += optTitleLines.length * 8 + 6;
+
+    // Image on the right side
+    const imgX = pw - margin - imgW;
+    const imgY = titleStartY;
+
+    // Image card background
+    doc.setFillColor(c.cardBg);
+    doc.roundedRect(imgX - 2, imgY - 2, imgW + 4, imgH + 4, 4, 4, "F");
+
+    if (imgData) {
+      try {
+        doc.addImage(imgData, "JPEG", imgX, imgY, imgW, imgH);
+        // Rounded corner overlay (clip simulation with corner fills)
+        const cr = 3;
+        doc.setFillColor("#000000");
+        // Top-left corner mask
+        doc.rect(imgX, imgY, cr, cr, "F");
+        doc.setFillColor(c.cardBg);
+        doc.circle(imgX + cr, imgY + cr, cr, "F");
+        // Top-right corner mask
+        doc.setFillColor("#000000");
+        doc.rect(imgX + imgW - cr, imgY, cr, cr, "F");
+        doc.setFillColor(c.cardBg);
+        doc.circle(imgX + imgW - cr, imgY + cr, cr, "F");
+        // Bottom-left corner mask
+        doc.setFillColor("#000000");
+        doc.rect(imgX, imgY + imgH - cr, cr, cr, "F");
+        doc.setFillColor(c.cardBg);
+        doc.circle(imgX + cr, imgY + imgH - cr, cr, "F");
+        // Bottom-right corner mask
+        doc.setFillColor("#000000");
+        doc.rect(imgX + imgW - cr, imgY + imgH - cr, cr, cr, "F");
+        doc.setFillColor(c.cardBg);
+        doc.circle(imgX + imgW - cr, imgY + imgH - cr, cr, "F");
+      } catch {
+        // Image failed — show placeholder
+        doc.setFillColor(c.cardBg);
+        doc.roundedRect(imgX, imgY, imgW, imgH, 3, 3, "F");
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(c.textMuted);
+        doc.text("Kein Bild", imgX + imgW / 2, imgY + imgH / 2, { align: "center" });
+      }
+    } else {
+      doc.setFillColor(c.cardBg);
+      doc.roundedRect(imgX, imgY, imgW, imgH, 3, 3, "F");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(c.textMuted);
+      doc.text("Kein Bild", imgX + imgW / 2, imgY + imgH / 2, { align: "center" });
+    }
+
+    // Make sure y is below the image
+    y = Math.max(y, imgY + imgH + 8);
+
+    // Vote percentage bar (full width)
+    const fullBarY = y;
+    doc.setFillColor(c.barBg);
+    doc.roundedRect(margin, fullBarY, contentW, 6, 3, 3, "F");
+    if (opt.percentage > 0) {
+      doc.setFillColor(rankColors[i]);
+      doc.roundedRect(margin, fullBarY, Math.max(6, contentW * (opt.percentage / 100)), 6, 3, 3, "F");
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(c.white);
+    doc.text(`${opt.percentage}%`, margin + contentW * (opt.percentage / 100) + 4, fullBarY + 4.5);
+    y = fullBarY + 14;
+
+    // Divider
+    doc.setFillColor(c.cardBorder);
+    doc.rect(margin, y, contentW, 0.3, "F");
+    y += 10;
+
+    // Description card
+    doc.setFillColor(c.cardBg);
+    const descText = opt.beschreibung || "Keine Beschreibung vorhanden.";
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const descLines = doc.splitTextToSize(descText, contentW - 20);
+    const descCardH = descLines.length * 4.8 + 16;
+
+    doc.roundedRect(margin, y, contentW, descCardH, 4, 4, "F");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(c.textMuted);
+    doc.text("BESCHREIBUNG", margin + 10, y + 8);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(c.textPrimary);
+    doc.text(descLines, margin + 10, y + 15);
+    y += descCardH + 6;
+
+    // Context card (if present)
+    if (opt.context && opt.context !== opt.beschreibung) {
+      doc.setFillColor(c.cardBg);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      const ctxLines = doc.splitTextToSize(opt.context, contentW - 20);
+      const ctxCardH = Math.min(ctxLines.length, 8) * 4.5 + 16;
+      const ctxTruncated = ctxLines.slice(0, 8);
+
+      if (y + ctxCardH > ph - margin - 10) {
+        doc.addPage();
+        drawBlackPage(doc);
+        y = margin;
+      }
+
+      doc.setFillColor(c.cardBg);
+      doc.roundedRect(margin, y, contentW, ctxCardH, 4, 4, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(c.textMuted);
+      doc.text("KONTEXT", margin + 10, y + 8);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(c.textSecondary);
+      doc.text(ctxTruncated, margin + 10, y + 15);
+      y += ctxCardH + 6;
+    }
+  }
+
+  // ── Footer on all pages ──
+  const pageCount = doc.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    drawBlackPage(doc); // Ensure background stays black after potential resets
+
+    // Re-render page content isn't needed — just add footer
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(c.textMuted);
+    doc.text(`Seite ${p} von ${pageCount}`, pw / 2, ph - 8, { align: "center" });
+
+    if (p === 1) {
+      doc.setFontSize(7);
+      doc.setTextColor(c.textMuted);
+      doc.text(
+        "Dieses Dokument dient als Grundlage für die Detailplanung durch das Architekturbüro.",
+        pw / 2,
+        ph - 13,
+        { align: "center" },
+      );
+    }
   }
 
   // Download

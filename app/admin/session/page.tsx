@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAdmin } from "../AdminContext";
 import { s } from "../styles";
+import { exportTop5Pdf } from "@/lib/exportTop5Pdf";
 
 export default function SessionPage() {
   const {
@@ -41,6 +42,9 @@ export default function SessionPage() {
   const [editImagePrompt, setEditImagePrompt] = useState("");
   const [editImageModel, setEditImageModel] = useState("gemini-2.0-flash-preview-image-generation");
   const [uploadingMedia, setUploadingMedia] = useState(false);
+
+  // Export
+  const [exporting, setExporting] = useState(false);
 
   // Tree reset
   const [showResetTree, setShowResetTree] = useState(false);
@@ -220,6 +224,23 @@ export default function SessionPage() {
       setError(data?.error ?? "Fehler beim Zurücksetzen");
     }
     setSaving(false);
+  }
+
+  async function handleExportTop5() {
+    if (!currentSession) return;
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/admin/export?sessionId=${encodeURIComponent(currentSession.id)}`, {
+        headers: headers(),
+      });
+      if (!res.ok) throw new Error("Export fehlgeschlagen");
+      const data = await res.json();
+      await exportTop5Pdf(data);
+    } catch {
+      setError("PDF-Export fehlgeschlagen. Bitte versuche es erneut.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   function formatCountdown(ms: number): string {
@@ -419,6 +440,23 @@ export default function SessionPage() {
               </button>
             )}
           </div>
+
+          {currentSession._count.votes > 0 && (
+            <button
+              style={{
+                ...s.btnSmall,
+                background: "rgba(96,165,250,0.15)",
+                color: "rgba(96,165,250,1)",
+                border: "1px solid rgba(96,165,250,0.3)",
+                opacity: exporting ? 0.5 : 1,
+                cursor: exporting ? "wait" : "pointer",
+              }}
+              onClick={handleExportTop5}
+              disabled={exporting}
+            >
+              {exporting ? "Exportiert…" : "Top 5 als PDF exportieren"}
+            </button>
+          )}
 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button

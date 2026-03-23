@@ -10,7 +10,6 @@ import { useSession } from "@/lib/useSession";
 import { useResponsive } from "@/lib/useResponsive";
 import { Leaderboard } from "@/components/Leaderboard";
 import { SessionTimeline } from "@/components/SessionTimeline";
-import { exportTop5Pdf } from "@/lib/exportTop5Pdf";
 
 export default function ResultsClient() {
   const router = useRouter();
@@ -21,7 +20,6 @@ export default function ResultsClient() {
   const [sessionId, setSessionId] = useState("");
   const [placeholderUrl, setPlaceholderUrl] = useState("/media/placeholder.jpg");
   const [myNode, setMyNode] = useState<TreeNodeData | null>(null);
-  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchActiveTreeMeta().then((m) => {
@@ -50,21 +48,6 @@ export default function ResultsClient() {
     })();
   }, [voterId, sessionId]);
 
-  async function handleExport() {
-    if (!sessionId) return;
-    setExporting(true);
-    try {
-      const res = await fetch(`/api/export?sessionId=${encodeURIComponent(sessionId)}`);
-      if (!res.ok) throw new Error("Export fehlgeschlagen");
-      const data = await res.json();
-      await exportTop5Pdf(data);
-    } catch {
-      alert("Export fehlgeschlagen. Bitte versuche es erneut.");
-    } finally {
-      setExporting(false);
-    }
-  }
-
   const isLrg = r.breakpoint === "large";
   const imgW = isLrg ? 140 : 96;
   const imgH = isLrg ? 186 : 128;
@@ -84,34 +67,6 @@ export default function ResultsClient() {
         </div>
 
         <SessionTimeline session={session} />
-
-        {sessionId && (
-          <button
-            onClick={handleExport}
-            disabled={exporting}
-            style={{
-              width: "100%",
-              padding: `${r.spacing.small + 4}px ${r.spacing.medium}px`,
-              marginBottom: r.spacing.medium,
-              border: "1px solid rgba(255,255,255,0.12)",
-              background: "rgba(255,255,255,0.06)",
-              color: "white",
-              borderRadius: r.borderRadius.medium,
-              cursor: exporting ? "wait" : "pointer",
-              fontWeight: 900,
-              fontSize: r.fontSize.body,
-              opacity: exporting ? 0.5 : 1,
-              backdropFilter: "blur(14px)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-            }}
-          >
-            <span style={{ fontSize: r.fontSize.body + 2 }}>&#x2913;</span>
-            {exporting ? "Exportiert…" : "Top 5 als PDF exportieren"}
-          </button>
-        )}
 
         <section
           style={{

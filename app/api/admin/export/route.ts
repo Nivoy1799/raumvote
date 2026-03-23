@@ -1,7 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
+
+function isAuthorized(req: Request): boolean {
+  if (!ADMIN_SECRET) return false;
+  const auth = req.headers.get("authorization") ?? "";
+  return auth === `Bearer ${ADMIN_SECRET}`;
+}
+
 export async function GET(req: Request) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("sessionId") ?? "";
 
@@ -29,7 +41,6 @@ export async function GET(req: Request) {
 
   const totalVotes = await prisma.vote.count({ where: { sessionId } });
 
-  // Fetch node details + like/comment counts for top 5
   const optionIds = grouped.map((g) => g.optionId);
 
   const nodes = await prisma.treeNode.findMany({
