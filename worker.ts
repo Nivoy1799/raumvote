@@ -45,8 +45,8 @@ pool
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-const POLL_INTERVAL = 2000; // 2 seconds
-const IMAGE_BATCH_SIZE = 3; // Process up to 3 images concurrently
+const POLL_INTERVAL = 1000; // 1 second
+const IMAGE_BATCH_SIZE = 6; // Process up to 6 images concurrently
 
 // ── Image processing (uses existing ImageTask table) ──
 
@@ -122,7 +122,7 @@ async function processImageTasks(): Promise<number> {
 
 // ── Job queue processing (pre-generation etc.) ──
 
-const JOB_BATCH_SIZE = 3; // Process up to 3 pre-gen jobs concurrently
+const JOB_BATCH_SIZE = 6; // Process up to 6 pre-gen jobs concurrently
 
 async function processJobQueue(): Promise<number> {
   const jobs = await prisma.$queryRaw<Array<{ id: string }>>`
