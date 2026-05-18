@@ -1,6 +1,6 @@
 services:
   influxdb:
-    image: influxdb:2.7
+    image: influxdb:2.9.1
     restart: unless-stopped
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
@@ -19,7 +19,7 @@ services:
       start_period: 15s
 
   telegraf:
-    image: telegraf:1.32
+    image: telegraf:1.38.4
     restart: unless-stopped
     depends_on:
       influxdb:
@@ -35,37 +35,31 @@ services:
     entrypoint: ["/usr/bin/telegraf"]
 
   loki:
-    image: grafana/loki:3.3.0
+    image: grafana/loki:3.6.11
     restart: unless-stopped
     volumes:
       - ./docker/monitoring/loki.yml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
 
   promtail:
-    image: grafana/promtail:3.3.0
+    image: grafana/promtail:3.6.11
     restart: unless-stopped
     depends_on:
       loki:
-        condition: service_healthy
+        condition: service_started
     volumes:
       - ./docker/monitoring/promtail.yml:/etc/promtail/config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     command: -config.file=/etc/promtail/config.yml
 
   grafana:
-    image: grafana/grafana:11.4.0
+    image: grafana/grafana:13.0.1-security-01
     restart: unless-stopped
     depends_on:
       influxdb:
         condition: service_healthy
       loki:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "${GRAFANA_PORT:-3001}:3000"
     environment:

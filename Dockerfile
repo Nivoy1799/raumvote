@@ -1,12 +1,12 @@
 # ── Stage 1: Dependencies ──
-FROM node:22-alpine AS deps
+FROM node:24.15.0-alpine3.23 AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 RUN npm ci
 
 # ── Stage 2: Build ──
-FROM node:22-alpine AS builder
+FROM node:24.15.0-alpine3.23 AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -17,7 +17,7 @@ ENV DATABASE_URL=postgresql://localhost:5432/placeholder
 RUN npx prisma generate && npm run build
 
 # ── Stage 3: Production (Next.js server) ──
-FROM node:22-alpine AS runner
+FROM node:24.15.0-alpine3.23 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
@@ -42,7 +42,7 @@ ENV HOSTNAME="0.0.0.0"
 CMD ["sh", "docker/entrypoint.sh"]
 
 # ── Stage 4: Worker ──
-FROM node:22-alpine AS worker
+FROM node:24.15.0-alpine3.23 AS worker
 WORKDIR /app
 ENV NODE_ENV=production
 
