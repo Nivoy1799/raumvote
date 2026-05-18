@@ -76,15 +76,38 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     ? (sessions.find((s) => s.id === selectedSessionId) ?? null)
     : (sessions.find((s) => s.status === "active" || s.status === "draft") ?? null);
 
-  // Auto-login: check if admin cookie is valid by probing a protected endpoint
+  const tryRefresh = useCallback(async (): Promise<boolean> => {
+    const r = await fetch("/api/admin/auth/refresh", { method: "POST" });
+    return r.ok;
+  }, []);
+
+  // Auto-login: check if admin cookie is valid, attempt refresh if expired
   useEffect(() => {
-    fetch("/api/admin/session", { headers: headers() }).then((r) => {
+    fetch("/api/admin/session", { headers: headers() }).then(async (r) => {
       if (r.ok) {
         setAuthed(true);
         r.json().then((d) => setSessions(d.sessions ?? []));
+      } else if (r.status === 401) {
+        const refreshed = await tryRefresh();
+        if (refreshed) {
+          const r2 = await fetch("/api/admin/session", { headers: headers() });
+          if (r2.ok) {
+            setAuthed(true);
+            r2.json().then((d) => setSessions(d.sessions ?? []));
+          }
+        }
       }
     });
-  }, [headers]);
+  }, [headers, tryRefresh]);
+
+  // Bootstrap a refresh cookie for pre-existing sessions, then keep the
+  // access token alive by refreshing every 55 minutes.
+  useEffect(() => {
+    if (!authed) return;
+    tryRefresh();
+    const id = setInterval(() => tryRefresh(), 55 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [authed, tryRefresh]);
 
   // Load sessions when authed
   const reloadSessions = useCallback(async () => {

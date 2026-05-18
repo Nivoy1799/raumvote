@@ -10,7 +10,9 @@ const ISSUER = "raumvote";
 const COOKIE_NAME = "rv-jwt";
 
 const ADMIN_ISSUER = "raumvote-admin";
+const ADMIN_REFRESH_ISSUER = "raumvote-admin-refresh";
 export const ADMIN_COOKIE_NAME = "rv-admin-jwt";
+export const ADMIN_REFRESH_COOKIE_NAME = "rv-admin-refresh";
 
 /** Default expiry: 30 days */
 const DEFAULT_EXP = "30d";
@@ -40,13 +42,31 @@ export async function signAdminJwt(): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setIssuer(ADMIN_ISSUER)
-    .setExpirationTime("8h")
+    .setExpirationTime("1h")
     .sign(secret);
 }
 
 export async function verifyAdminJwt(token: string): Promise<boolean> {
   try {
     await jwtVerify(token, secret, { issuer: ADMIN_ISSUER });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function signAdminRefreshJwt(): Promise<string> {
+  return new SignJWT({ sub: "admin" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setIssuer(ADMIN_REFRESH_ISSUER)
+    .setExpirationTime("7d")
+    .sign(secret);
+}
+
+export async function verifyAdminRefreshJwt(token: string): Promise<boolean> {
+  try {
+    await jwtVerify(token, secret, { issuer: ADMIN_REFRESH_ISSUER });
     return true;
   } catch {
     return false;
