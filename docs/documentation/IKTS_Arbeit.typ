@@ -723,7 +723,8 @@ Das PostgreSQL-Schema (verwaltet durch Prisma) besteht aus 10 Modellen:
   [`components/`], [Geteilte UI-Komponenten (ActionRail, CommentBottomSheet, GlobalTabbar usw.)],
   [`lib/`], [21 Hilfsmodule (Auth, Tree, Voting, Bildgenerierung, Queue usw.)],
   [`prisma/`], [Schema und Migrationen],
-  [`middleware.ts`], [JWT-Verifizierung und Request-Logging],
+  [`lib/adminAuth.ts`], [Admin-Authentifizierung: liest und prüft den `rv-admin-jwt`-Cookie],
+  [`lib/getVoter.ts`], [Voter-Identität: liest `x-voter-hash`-Header oder validiert `voterId` gegen die Datenbank],
   [`worker.ts`], [Eigenständiger Hintergrund-Job-Prozessor],
 )
 
@@ -738,8 +739,8 @@ Wenn eine nutzende Person einen QR-Code scannt, läuft folgender Prozess ab:
 1. Der Browser navigiert zu `/login/{token}`.
 2. Der Client ruft `POST /api/auth/login` mit dem Token auf.
 3. Der Server validiert das Token gegen die `AccessToken`-Tabelle.
-4. Bei Gültigkeit signiert der Server ein JWT mit dem Voter-Hash und setzt es als `httpOnly`-Cookie.
-5. Die rohe `voterId` wird zusätzlich in `localStorage` als Fallback gespeichert.
+4. Bei Gültigkeit signiert der Server ein JWT mit dem Voter-Hash und setzt es als `httpOnly`-Cookie (`rv-jwt`, 30 Tage).
+5. Die rohe `voterId` wird im `localStorage` des Browsers gespeichert, damit sie für direkte API-Aufrufe (z.B. Status-Abfragen) als Fallback verfügbar ist.
 6. Die nutzende Person wird zu `/start` weitergeleitet.
 
 === Admin-Authentifizierung
