@@ -670,7 +670,34 @@
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SLIDE 14 — Q&A
+// SLIDE 14 — DISCLAIMER
+// ─────────────────────────────────────────────────────────────────────────────
+
+#slide(title: "KI-Unterstützung")[
+  #v(4mm)
+  #block(fill: c-surface, stroke: 0.5pt + c-border, radius: 3pt, inset: (x: 14pt, y: 12pt), width: 100%)[
+    #text(size: 9pt, fill: c-muted)[
+      Inhalte dieser Präsentation sowie Teile des Codes wurden mit Unterstützung von KI-Werkzeugen erstellt, überprüft und überarbeitet:
+
+      #v(4mm)
+      #grid(
+        columns: (auto, 1fr),
+        column-gutter: 10pt,
+        row-gutter: 5pt,
+        text(weight: "bold", fill: c-text)[Anthropic Claude Code],
+        [Architekturentscheide, Implementierung, Debugging, Präsentationsstruktur],
+        text(weight: "bold", fill: c-text)[OpenAI ChatGPT],
+        [Konzeptfragen, inhaltliche Recherche, Formulierungen],
+      )
+
+      #v(6mm)
+      Alle Inhalte wurden vom Autor geprüft und verantwortet. Die Verantwortung für Richtigkeit und Vollständigkeit liegt beim Autor.
+    ]
+  ]
+]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 15 — Q&A
 // ─────────────────────────────────────────────────────────────────────────────
 
 #section-slide("Fragen?", subtitle: "Jovin Risch")
