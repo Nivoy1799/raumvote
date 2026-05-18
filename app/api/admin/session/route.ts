@@ -1,17 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
-
-function isAuthorized(req: Request): boolean {
-  if (!ADMIN_SECRET) return false;
-  const auth = req.headers.get("authorization") ?? "";
-  return auth === `Bearer ${ADMIN_SECRET}`;
-}
+import { isAdminAuthorized } from "@/lib/adminAuth";
 
 // List all sessions (with tree stats)
 export async function GET(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!(await isAdminAuthorized())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -25,7 +18,7 @@ export async function GET(req: Request) {
 
 // Create new session (with root node)
 export async function POST(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!(await isAdminAuthorized())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -91,7 +84,7 @@ export async function POST(req: Request) {
 
 // Update session (state transitions + field edits)
 export async function PATCH(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!(await isAdminAuthorized())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -193,7 +186,7 @@ export async function PATCH(req: Request) {
 
 // Delete session (only draft)
 export async function DELETE(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!(await isAdminAuthorized())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

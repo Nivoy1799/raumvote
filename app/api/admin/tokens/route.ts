@@ -1,18 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
-
-function isAuthorized(req: Request): boolean {
-  if (!ADMIN_SECRET) return false;
-  const auth = req.headers.get("authorization") ?? "";
-  return auth === `Bearer ${ADMIN_SECRET}`;
-}
+import { isAdminAuthorized } from "@/lib/adminAuth";
 
 // List all tokens
 export async function GET(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!(await isAdminAuthorized())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -25,7 +18,7 @@ export async function GET(req: Request) {
 
 // Create new token(s)
 export async function POST(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!(await isAdminAuthorized())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -48,7 +41,7 @@ export async function POST(req: Request) {
 
 // Update token (activate/deactivate, change label)
 export async function PATCH(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!(await isAdminAuthorized())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -77,7 +70,7 @@ export async function PATCH(req: Request) {
 
 // Delete token
 export async function DELETE(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!(await isAdminAuthorized())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

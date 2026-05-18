@@ -33,8 +33,6 @@ const statusColors: Record<string, string> = {
 
 function AdminShell({ children }: { children: React.ReactNode }) {
   const {
-    secret,
-    setSecret,
     authed,
     setAuthed,
     setTokens,
@@ -45,6 +43,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
     error: ctxError,
     setError,
   } = useAdmin();
+  const [secret, setSecret] = useState("");
   const [loginError, setLoginError] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(
@@ -68,12 +67,15 @@ function AdminShell({ children }: { children: React.ReactNode }) {
 
   async function login() {
     setLoginError("");
-    const res = await fetch("/api/admin/tokens", { headers: { authorization: `Bearer ${secret}` } });
+    const res = await fetch("/api/admin/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ secret }),
+    });
     if (res.ok) {
-      sessionStorage.setItem("adminSecret", secret);
       setAuthed(true);
-      const data = await res.json();
-      setTokens(data.tokens ?? []);
+      const tokensRes = await fetch("/api/admin/tokens");
+      if (tokensRes.ok) setTokens((await tokensRes.json()).tokens ?? []);
     } else {
       setLoginError("Falsches Passwort");
     }

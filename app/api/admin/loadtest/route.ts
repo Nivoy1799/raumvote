@@ -2,23 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { runLoadTest, MAX_CONCURRENCY, MAX_REQUESTS, MAX_SCENARIOS } from "@/lib/loadtest";
 import type { LoadTestScenario, ScenarioResult } from "@/lib/loadtest";
-
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
+import { isAdminAuthorized } from "@/lib/adminAuth";
 
 const BASE_URL =
   process.env.LOADTEST_BASE_URL ||
   (process.env.NODE_ENV === "production" ? "http://nginx" : `http://localhost:${process.env.PORT || 3000}`);
 
-function isAuthorized(req: Request): boolean {
-  if (!ADMIN_SECRET) return false;
-  const auth = req.headers.get("authorization") ?? "";
-  return auth === `Bearer ${ADMIN_SECRET}`;
-}
-
 const DEFAULT_SCENARIOS: LoadTestScenario[] = [
-  { label: "Warmup", endpoint: "/api/auth/me", method: "GET", requests: 50, concurrency: 10 },
-  { label: "Baseline", endpoint: "/api/auth/me", method: "GET", requests: 200, concurrency: 25 },
-  { label: "Health Check", endpoint: "/api/health", method: "GET", requests: 200, concurrency: 25 },
+  { label: "Warmup", endpoint: "/api/auth/me", method: "GET", requests: 200, concurrency: 10 },
+  { label: "Baseline", endpoint: "/api/auth/me", method: "GET", requests: 500, concurrency: 25 },
+  { label: "Health Check", endpoint: "/api/health", method: "GET", requests: 500, concurrency: 25 },
 ];
 
 /* ── InfluxDB persistence ── */
@@ -80,7 +73,7 @@ async function writeToInfluxDB(results: ScenarioResult[], phase: string, timesta
 /* ── Endpoint ── */
 
 export async function POST(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!(await isAdminAuthorized())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -142,7 +135,7 @@ export async function POST(req: Request) {
         label: "Vote Status (JWT + DB)",
         endpoint: `/api/vote/status?sessionId=${activeSession.id}`,
         method: "GET",
-        requests: 200,
+        requests: 500,
         concurrency: 25,
       });
     }

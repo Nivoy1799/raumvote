@@ -1,17 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
-
-function isAuthorized(req: Request): boolean {
-  if (!ADMIN_SECRET) return false;
-  const auth = req.headers.get("authorization") ?? "";
-  return auth === `Bearer ${ADMIN_SECRET}`;
-}
+import { isAdminAuthorized } from "@/lib/adminAuth";
 
 // Get all nodes for tree view (flat list, client builds hierarchy)
 export async function GET(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!(await isAdminAuthorized())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -1,18 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
-
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
-
-function isAuthorized(req: Request): boolean {
-  if (!ADMIN_SECRET) return false;
-  const auth = req.headers.get("authorization") ?? "";
-  return auth === `Bearer ${ADMIN_SECRET}`;
-}
+import { isAdminAuthorized } from "@/lib/adminAuth";
 
 // List nodes with image task status and stats
 export async function GET(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!(await isAdminAuthorized())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -133,7 +126,7 @@ export async function GET(req: Request) {
 
 // Bulk actions on nodes
 export async function POST(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!(await isAdminAuthorized())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

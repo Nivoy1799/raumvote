@@ -21,20 +21,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Voting period closed" }, { status: 403 });
   }
 
-  const existing = await prisma.vote.findUnique({
-    where: { sessionId_voterHash: { sessionId, voterHash } },
+  const result = await prisma.$transaction(async (tx) => {
+    const existing = await tx.vote.findUnique({
+      where: { sessionId_voterHash: { sessionId, voterHash } },
+    });
+
+    if (existing && existing.optionId === optionId) {
+      await tx.vote.delete({ where: { id: existing.id } });
+      return { ok: true, optionId: null };
+    }
+
+    await tx.vote.upsert({
+      where: { sessionId_voterHash: { sessionId, voterHash } },
+      create: { sessionId, voterHash, optionId },
+      update: { optionId },
+    });
+
+    return { ok: true, optionId };
   });
 
-  if (existing && existing.optionId === optionId) {
-    await prisma.vote.delete({ where: { id: existing.id } });
-    return NextResponse.json({ ok: true, optionId: null });
-  }
-
-  await prisma.vote.upsert({
-    where: { sessionId_voterHash: { sessionId, voterHash } },
-    create: { sessionId, voterHash, optionId },
-    update: { optionId },
-  });
-
-  return NextResponse.json({ ok: true, optionId });
+  return NextResponse.json(result);
 }

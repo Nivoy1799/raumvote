@@ -21,17 +21,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Voting period closed" }, { status: 403 });
   }
 
-  const existing = await prisma.like.findUnique({
-    where: {
-      sessionId_optionId_voterHash: { sessionId, optionId, voterHash },
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const existing = await tx.like.findUnique({
+      where: {
+        sessionId_optionId_voterHash: { sessionId, optionId, voterHash },
+      },
+    });
+
+    if (existing) {
+      await tx.like.delete({ where: { id: existing.id } });
+      return { liked: false };
+    } else {
+      await tx.like.create({ data: { sessionId, optionId, voterHash } });
+      return { liked: true };
+    }
   });
 
-  if (existing) {
-    await prisma.like.delete({ where: { id: existing.id } });
-    return NextResponse.json({ liked: false });
-  } else {
-    await prisma.like.create({ data: { sessionId, optionId, voterHash } });
-    return NextResponse.json({ liked: true });
-  }
+  return NextResponse.json(result);
 }

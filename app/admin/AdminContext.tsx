@@ -31,8 +31,6 @@ export type Token = {
 };
 
 type AdminContextType = {
-  secret: string;
-  setSecret: (s: string) => void;
   authed: boolean;
   setAuthed: (a: boolean) => void;
   sessions: Session[];
@@ -62,9 +60,6 @@ export function useAdmin() {
 }
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
-  const [secret, setSecret] = useState(() =>
-    typeof window !== "undefined" ? (sessionStorage.getItem("adminSecret") ?? "") : "",
-  );
   const [authed, setAuthed] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [tokens, setTokens] = useState<Token[]>([]);
@@ -74,33 +69,22 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [now, setNow] = useState(() => Date.now());
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
-  const headers = useCallback(
-    () => ({ "content-type": "application/json", authorization: `Bearer ${secret}` }),
-    [secret],
-  );
+  const headers = useCallback(() => ({ "content-type": "application/json" }), []);
 
   // If a session is explicitly selected, use it; otherwise default to active/draft
   const currentSession = selectedSessionId
     ? (sessions.find((s) => s.id === selectedSessionId) ?? null)
     : (sessions.find((s) => s.status === "active" || s.status === "draft") ?? null);
 
-  // Auto-login from sessionStorage
+  // Auto-login: check if admin cookie is valid by probing a protected endpoint
   useEffect(() => {
-    const saved = sessionStorage.getItem("adminSecret");
-    if (saved) {
-      fetch("/api/admin/tokens", { headers: { authorization: `Bearer ${saved}` } })
-        .then((r) => {
-          if (r.ok) {
-            setAuthed(true);
-            return r.json();
-          }
-          return null;
-        })
-        .then((d) => {
-          if (d) setTokens(d.tokens ?? []);
-        });
-    }
-  }, []);
+    fetch("/api/admin/session", { headers: headers() }).then((r) => {
+      if (r.ok) {
+        setAuthed(true);
+        r.json().then((d) => setSessions(d.sessions ?? []));
+      }
+    });
+  }, [headers]);
 
   // Load sessions when authed
   const reloadSessions = useCallback(async () => {
@@ -134,8 +118,6 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   return (
     <AdminContext.Provider
       value={{
-        secret,
-        setSecret,
         authed,
         setAuthed,
         sessions,
