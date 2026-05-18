@@ -190,18 +190,80 @@ RaumVote wurde im Rahmen einer Design-Thinking-Blockwoche entwickelt.
 
 ## 10. Betrieb & Setup
 
-    npm run dev
-    npm run build
-    npm run lint
-    npx prisma migrate dev --name <name>
-    npx prisma generate
+### Entwicklung (lokal, ohne Docker)
+
+```bash
+npm run dev          # Next.js Dev-Server starten
+npm run build        # Prisma-Client generieren + Next.js bauen
+npm run lint         # ESLint
+npx prisma migrate dev --name <name>   # Migration erstellen und anwenden
+npx prisma generate  # Prisma-Client nach Schema-Änderungen neu generieren
+```
+
+Verbindet sich via `DATABASE_URL` in `.env` direkt gegen **Neon** (Cloud-Postgres).
+
+---
+
+### Lokal mit Docker (self-contained)
+
+Der Docker-Stack bringt eine eigene **PostgreSQL 18.4**-Instanz mit. Keine externe Datenbankverbindung nötig.
+
+**Voraussetzungen:**
+
+- Docker + Docker Compose installiert
+- `.env` mit allen Secrets vorhanden (API-Keys, `VOTER_PEPPER`, `ADMIN_SECRET` etc.)
+
+**Starten:**
+
+```bash
+# App-Stack (Next.js + Worker + nginx + PostgreSQL)
+docker compose up --build
+
+# Mit Monitoring (Grafana, InfluxDB, Loki)
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up --build
+```
+
+Die App ist danach unter [http://localhost](http://localhost) erreichbar.
+
+**Wie funktioniert die DB-Umschaltung?**
+
+`docker-compose.yml` lädt zuerst `.env` (Neon-Credentials) und überschreibt dann `DATABASE_URL` + `DIRECT_URL` mit der lokalen Postgres-Verbindung via `.env.docker`. Die Neon-Verbindung bleibt in `.env` für `npm run dev` und das Cloud-Deployment erhalten.
+
+```
+.env         → Neon (Cloud) — npm run dev, Railway, Vercel
+.env.docker  → lokale Postgres — docker compose up
+```
+
+Das Schema wird beim Container-Start automatisch via `prisma db push` angewendet.
+
+**Stoppen:**
+
+```bash
+docker compose down        # Container stoppen (Daten bleiben erhalten)
+docker compose down -v     # Container + Volumes löschen (DB zurücksetzen)
+```
+
+---
 
 ### Environment-Variablen
 
-    DATABASE_URL=
-    DIRECT_URL=
-    VOTER_PEPPER=
-    ADMIN_SECRET=
+**Erforderlich (`.env`):**
+
+| Variable       | Beschreibung                                 |
+| -------------- | -------------------------------------------- |
+| `DATABASE_URL` | Neon Pooled Connection String                |
+| `DIRECT_URL`   | Neon Direct Connection (für Migrationen)     |
+| `VOTER_PEPPER` | Geheimer Pepper für SHA-256 Voter-ID-Hashing |
+| `ADMIN_SECRET` | Passwort für den Admin-Bereich               |
+
+**Optional:**
+
+| Variable         | Beschreibung                                        |
+| ---------------- | --------------------------------------------------- |
+| `JWT_SECRET`     | JWT-Signierungsgeheimnis (Fallback: `VOTER_PEPPER`) |
+| `OPENAI_API_KEY` | GPT-4o für Baumgenerierung                          |
+| `GEMINI_API_KEY` | Gemini für Bildgenerierung                          |
+| `R2_*`           | Cloudflare R2 für Bildspeicher                      |
 
 ---
 
