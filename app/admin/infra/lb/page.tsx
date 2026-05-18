@@ -192,6 +192,69 @@ export default function LoadbalancerPage() {
             </button>
           )}
         </div>
+        <div style={s.sub}>
+          Custom HTTP-Benchmark (integriert) · 5 Iterationen · Median aggregiert · 5% Ausreisser-Kürzung · 1 s
+          Abkühlzeit zwischen Szenarien
+        </div>
+
+        {/* Scenario legend */}
+        <div
+          style={{
+            marginTop: 12,
+            marginBottom: 16,
+            padding: "10px 14px",
+            borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.06)",
+            background: "rgba(255,255,255,0.02)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              opacity: 0.4,
+              fontWeight: 700,
+              marginBottom: 8,
+              textTransform: "uppercase" as const,
+              letterSpacing: 0.5,
+            }}
+          >
+            Szenarien (Standard)
+          </div>
+          {[
+            {
+              label: "Warmup",
+              endpoint: "GET /api/auth/me",
+              desc: "Verbindungs-Aufwärmen, JIT & Connection Pool — Ergebnisse werden verworfen",
+            },
+            {
+              label: "Baseline",
+              endpoint: "GET /api/auth/me",
+              desc: "Reine JWT-Validierung via Cookie, kein DB-Zugriff — misst reinen App-Overhead",
+            },
+            {
+              label: "Health Check",
+              endpoint: "GET /api/health",
+              desc: "Unauthentifizierter Endpunkt — minimaler Overhead als Vergleichswert",
+            },
+            {
+              label: "Vote Status",
+              endpoint: "GET /api/vote/status",
+              desc: "Vollständige JWT-Validierung + PostgreSQL-Query — misst End-to-End DB-Latenz",
+            },
+          ].map((sc) => (
+            <div
+              key={sc.label}
+              style={{ display: "flex", gap: 10, alignItems: "baseline", marginBottom: 4, flexWrap: "wrap" }}
+            >
+              <span style={{ fontSize: 11, fontWeight: 800, minWidth: 90, fontFamily: "monospace", opacity: 0.8 }}>
+                {sc.label}
+              </span>
+              <span style={{ fontSize: 10, opacity: 0.35, fontFamily: "monospace", minWidth: 160 }}>{sc.endpoint}</span>
+              <span style={{ fontSize: 11, opacity: 0.5 }}>{sc.desc}</span>
+            </div>
+          ))}
+        </div>
+
         <div style={s.sub}>HTTP-Benchmark: Pre-Test → Deine Änderungen → Post-Test → Vergleich</div>
 
         {error && <div style={{ ...s.error, marginBottom: 12 }}>{error}</div>}

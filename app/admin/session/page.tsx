@@ -19,7 +19,6 @@ export default function SessionPage() {
     error,
     setError,
     now,
-    secret,
   } = useAdmin();
 
   const otherSessions = sessions.filter((s) => s.id !== currentSession?.id);
@@ -170,7 +169,6 @@ export default function SessionPage() {
     form.append("file", file);
     await fetch("/api/admin/session/media", {
       method: "POST",
-      headers: { authorization: `Bearer ${secret}` },
       body: form,
     });
     await reloadSessions();
@@ -200,7 +198,7 @@ export default function SessionPage() {
     setSaving(true);
     const res = await fetch("/api/admin/tree-reset", {
       method: "POST",
-      headers: { "x-admin-secret": secret, "content-type": "application/json" },
+      headers: headers(),
       body: JSON.stringify({
         sessionId: currentSession.id,
         rootTitel: resetRootTitel,

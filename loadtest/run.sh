@@ -98,7 +98,11 @@ run_test() {
 METRICS_FILE=$(mktemp)
 ENDPOINT_ME="${BASE_URL}/api/auth/me"
 ENDPOINT_HEALTH="${BASE_URL}/api/health"
-ENDPOINT_VOTE_STATUS="${BASE_URL}/api/vote/status?sessionId=placeholder&voterId=placeholder"
+SESSION_ID="${SESSION_ID:-}"
+if [ -z "$SESSION_ID" ]; then
+  SESSION_ID=$(curl -s "${BASE_URL}/api/session" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+fi
+ENDPOINT_VOTE_STATUS="${BASE_URL}/api/vote/status?sessionId=${SESSION_ID}"
 
 echo "=============================================="
 echo "  Load Test Report — $(date '+%Y-%m-%d %H:%M')"
@@ -142,7 +146,7 @@ cat >> "$REPORT_FILE" << EOF
 | Ziel | ${BASE_URL} |
 | Architektur | 2× Next.js App (standalone) + nginx Load Balancer |
 | Authentifizierung | JWT (httpOnly Cookie, HS256, jose-Bibliothek) |
-| Datenbank | Neon Postgres (Pooled Connection) |
+| Datenbank | PostgreSQL 18.4 (lokaler Docker-Container) |
 | Tool | [hey](https://github.com/rakyll/hey) |
 
 ## Ergebnisse

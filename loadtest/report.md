@@ -4,23 +4,24 @@
 
 | Parameter         | Wert                                              |
 | ----------------- | ------------------------------------------------- |
-| Datum             | 2026-02-19 00:35                                  |
+| Datum             | 2026-05-18 13:38                                  |
 | Ziel              | http://localhost                                  |
 | Architektur       | 2× Next.js App (standalone) + nginx Load Balancer |
 | Authentifizierung | JWT (httpOnly Cookie, HS256, jose-Bibliothek)     |
-| Datenbank         | Neon Postgres (Pooled Connection)                 |
+| Datenbank         | PostgreSQL 18.4 (lokaler Docker-Container)        |
 | Tool              | [hey](https://github.com/rakyll/hey)              |
 
 ## Ergebnisse
 
-| Test                    | Endpoint                                                                         | Requests | Concurrency | Req/s         | Avg (s) | P50 (s) | P95 (s) | P99 (s) | Status 200 |
-| ----------------------- | -------------------------------------------------------------------------------- | -------- | ----------- | ------------- | ------- | ------- | ------- | ------- | ---------- |
-| Warmup                  | `GET http://localhost/api/auth/me`                                               | 100      | 10          | **933.7689**  | 0.0102  | 0.0099  | 0.0199  | 0.0241  | 100        |
-| Baseline (moderate)     | `GET http://localhost/api/auth/me`                                               | 1000     | 50          | **1349.9969** | 0.0324  | 0.0331  | 0.0557  | 0.0668  | 1000       |
-| High Concurrency        | `GET http://localhost/api/auth/me`                                               | 2000     | 200         | **1742.3406** | 0.1072  | 0.1082  | 0.1382  | 0.1659  | 2000       |
-| Sustained Load (5s)     | `GET http://localhost/api/auth/me`                                               | 5000     | 100         | **2162.9109** | 0.0442  | 0.0456  | 0.0816  | 0.0940  | 5000       |
-| Health Check (kein JWT) | `GET http://localhost/api/health`                                                | 1000     | 100         | **560.2328**  | 0.1506  | 0.1636  | 0.2764  | 0.3403  | 1000       |
-| Vote Status (JWT + DB)  | `GET http://localhost/api/vote/status?sessionId=placeholder&voterId=placeholder` | 1000     | 50          | **676.3634**  | 0.0710  | 0.0682  | 0.1002  | 0.1240  | 1000       |
+| Test                    | Endpoint                                                                   | Requests | Concurrency | Req/s         | Avg (s) | P50 (s) | P95 (s) | P99 (s) | Status 200 |
+| ----------------------- | -------------------------------------------------------------------------- | -------- | ----------- | ------------- | ------- | ------- | ------- | ------- | ---------- |
+| Warmup                  | `GET http://localhost/api/auth/me`                                         | 100      | 10          | **1015.2108** | 0.0088  | 0.0097  | 0.0240  | 0.0349  | 100        |
+| Baseline (moderate)     | `GET http://localhost/api/auth/me`                                         | 1000     | 50          | **1813.0146** | 0.0239  | 0.0160  | 0.0565  | 0.0582  | 1000       |
+| High Concurrency        | `GET http://localhost/api/auth/me`                                         | 2000     | 200         | **2682.0481** | 0.0643  | 0.0560  | 0.1314  | 0.1374  | [200]      |
+| 2000                    | `0.0622`                                                                   |          |             | \*\*\*\*      |         |         |         |         |            |
+| Sustained Load (5s)     | `GET http://localhost/api/auth/me`                                         | 5000     | 100         | **3131.5056** | 0.0299  | 0.0290  | 0.0659  | 0.0742  | 5000       |
+| Health Check (kein JWT) | `GET http://localhost/api/health`                                          | 1000     | 100         | **2416.2101** | 0.0366  | 0.0413  | 0.0619  | 0.0633  | 1000       |
+| Vote Status (JWT + DB)  | `GET http://localhost/api/vote/status?sessionId=cmlrrrund000138bwljssqdm6` | 1000     | 50          | **2349.7515** | 0.0203  | 0.0200  | 0.0299  | 0.0358  | 1000       |
 
 ## Analyse
 
