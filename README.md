@@ -49,7 +49,7 @@ mit einer real implementierten Webanwendung.
 
 ### Level 1 – System Context
 
-![System Context](private/c4_model_system.png)
+![System Context](private/c4_model_system_v2.png)
 
 #### Akteure
 
@@ -68,7 +68,7 @@ mit einer real implementierten Webanwendung.
 
 ### Level 2 – Container
 
-![Container Diagram](private/c4_model_container.png)
+![Container Diagram](private/c4_model_container_v2.png)
 
 | Container          | Technologie          | Zweck                       |
 | ------------------ | -------------------- | --------------------------- |

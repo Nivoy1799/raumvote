@@ -41,3 +41,9 @@ local/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IKTS presentation: intermediate page renders for PPTX build
+docs/presentation-ikts/slide-*.png
+
+# Office temp lock files
+~$*
