@@ -769,20 +769,37 @@ export default function MePage() {
 
               <div
                 style={{
-                  fontSize: r.fontSize.body,
-                  fontWeight: 850,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
                   marginBottom: r.spacing.small,
                   marginTop: r.spacing.medium,
                 }}
               >
-                Farbblindheit
+                <div style={{ fontSize: r.fontSize.body, fontWeight: 850 }}>Farbblindheit</div>
+                <span
+                  style={{
+                    fontSize: r.fontSize.small - 2,
+                    fontWeight: 700,
+                    padding: "2px 6px",
+                    borderRadius: 4,
+                    background: "rgba(251, 191, 36, 0.18)",
+                    border: "1px solid rgba(251, 191, 36, 0.5)",
+                    color: "rgb(251, 191, 36)",
+                    letterSpacing: 0.2,
+                  }}
+                >
+                  Experimentell
+                </span>
+              </div>
+              <div style={{ fontSize: r.fontSize.small, opacity: 0.55, marginBottom: r.spacing.small }}>
+                Die Simulation ist auf manchen Geräten/Browsern noch nicht zuverlässig.
               </div>
               <select
                 value={colorblindMode}
                 onChange={(e) => {
                   setColorblindMode(e.target.value);
                   localStorage.setItem("rv-colorblind-mode", e.target.value);
-                  window.dispatchEvent(new CustomEvent("rv-colorblind-change", { detail: { mode: e.target.value } }));
                 }}
                 style={{
                   width: "100%",
@@ -814,13 +831,28 @@ export default function MePage() {
               {/* TTS Settings */}
               <div
                 style={{
-                  fontSize: r.fontSize.body,
-                  fontWeight: 850,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
                   marginBottom: r.spacing.small,
                   marginTop: r.spacing.medium,
                 }}
               >
-                Vorlesen (Text-zu-Sprache)
+                <div style={{ fontSize: r.fontSize.body, fontWeight: 850 }}>Vorlesen (Text-zu-Sprache)</div>
+                <span
+                  style={{
+                    fontSize: r.fontSize.small - 2,
+                    fontWeight: 700,
+                    padding: "2px 6px",
+                    borderRadius: 4,
+                    background: "rgba(251, 191, 36, 0.18)",
+                    border: "1px solid rgba(251, 191, 36, 0.5)",
+                    color: "rgb(251, 191, 36)",
+                    letterSpacing: 0.2,
+                  }}
+                >
+                  Experimentell
+                </span>
               </div>
               <label
                 style={{
