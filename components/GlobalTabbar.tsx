@@ -40,7 +40,7 @@ export default function GlobalTabbar() {
   };
 
   return (
-    <div style={blocker}>
+    <div data-cb-skip="true" style={blocker}>
       <footer style={{ ...tabbar, pointerEvents: "auto" }}>
         <Tab
           icon={faHouse}
