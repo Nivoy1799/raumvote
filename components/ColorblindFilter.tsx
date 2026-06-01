@@ -10,7 +10,9 @@ const FILTER_ID: Record<string, string> = {
 
 function apply(mode: string | null) {
   const id = mode ? FILTER_ID[mode] : undefined;
-  document.documentElement.style.filter = id ? `url(#${id})` : "";
+  const value = id ? `url(#${id})` : "";
+  document.body.style.filter = value;
+  (document.body.style as CSSStyleDeclaration & { webkitFilter: string }).webkitFilter = value;
 }
 
 export default function ColorblindFilter() {
@@ -34,7 +36,17 @@ export default function ColorblindFilter() {
   }, []);
 
   return (
-    <svg aria-hidden="true" style={{ position: "absolute", width: 0, height: 0, pointerEvents: "none" }}>
+    <svg
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        width: 0,
+        height: 0,
+        pointerEvents: "none",
+        filter: "none",
+        WebkitFilter: "none",
+      }}
+    >
       <defs>
         <filter id="cb-deuteranopia">
           <feColorMatrix
