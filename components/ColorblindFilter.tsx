@@ -2,17 +2,15 @@
 
 import { useEffect } from "react";
 
-const FILTER_ID: Record<string, string> = {
-  deuteranopia: "cb-deuteranopia",
-  protanopia: "cb-protanopia",
-  tritanopia: "cb-tritanopia",
-};
+const MODES = ["deuteranopia", "protanopia", "tritanopia"] as const;
+type Mode = (typeof MODES)[number];
 
 function apply(mode: string | null) {
-  const id = mode ? FILTER_ID[mode] : undefined;
-  const value = id ? `url(#${id})` : "";
-  document.body.style.filter = value;
-  (document.body.style as CSSStyleDeclaration & { webkitFilter: string }).webkitFilter = value;
+  const cls = document.body.classList;
+  for (const m of MODES) cls.remove(`cb-${m}`);
+  if (mode && (MODES as readonly string[]).includes(mode)) {
+    cls.add(`cb-${mode as Mode}`);
+  }
 }
 
 export default function ColorblindFilter() {
@@ -48,7 +46,7 @@ export default function ColorblindFilter() {
       }}
     >
       <defs>
-        <filter id="cb-deuteranopia">
+        <filter id="cb-deuteranopia" colorInterpolationFilters="sRGB">
           <feColorMatrix
             type="matrix"
             values="0.625 0.375 0    0 0
@@ -57,7 +55,7 @@ export default function ColorblindFilter() {
                     0     0     0    1 0"
           />
         </filter>
-        <filter id="cb-protanopia">
+        <filter id="cb-protanopia" colorInterpolationFilters="sRGB">
           <feColorMatrix
             type="matrix"
             values="0.567 0.433 0     0 0
@@ -66,7 +64,7 @@ export default function ColorblindFilter() {
                     0     0     0     1 0"
           />
         </filter>
-        <filter id="cb-tritanopia">
+        <filter id="cb-tritanopia" colorInterpolationFilters="sRGB">
           <feColorMatrix
             type="matrix"
             values="0.95  0.05  0     0 0

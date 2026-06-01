@@ -42,3 +42,18 @@ body {
     transform: translateY(0);
   }
 }
+
+/* Colorblind simulation — filter each direct child of body (except SVG defs)
+   so body itself stays an unfiltered containing block for position:fixed. */
+body.cb-deuteranopia > *:not(svg) {
+  filter: url(#cb-deuteranopia);
+  -webkit-filter: url(#cb-deuteranopia);
+}
+body.cb-protanopia > *:not(svg) {
+  filter: url(#cb-protanopia);
+  -webkit-filter: url(#cb-protanopia);
+}
+body.cb-tritanopia > *:not(svg) {
+  filter: url(#cb-tritanopia);
+  -webkit-filter: url(#cb-tritanopia);
+}
