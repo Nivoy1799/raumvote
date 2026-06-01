@@ -782,6 +782,7 @@ export default function MePage() {
                 onChange={(e) => {
                   setColorblindMode(e.target.value);
                   localStorage.setItem("rv-colorblind-mode", e.target.value);
+                  window.dispatchEvent(new CustomEvent("rv-colorblind-change", { detail: { mode: e.target.value } }));
                 }}
                 style={{
                   width: "100%",

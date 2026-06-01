@@ -80,12 +80,28 @@ export default function NodePage() {
   const [showFirstLikeCelebration, setShowFirstLikeCelebration] = useState(false);
   const [showFirstVoteCelebration, setShowFirstVoteCelebration] = useState(false);
 
-  // Speak node question via TTS
+  // Speak node question + both options via TTS
   useEffect(() => {
-    if (node?.question) {
-      speak(node.question);
-    }
-  }, [nodeId, node?.question, speak]);
+    if (!node?.question || !left || !right) return;
+    const parts = [
+      node.question,
+      `Links: ${left.titel}.`,
+      left.beschreibung,
+      `Rechts: ${right.titel}.`,
+      right.beschreibung,
+    ].filter(Boolean);
+    speak(parts.join(" "));
+  }, [
+    nodeId,
+    node?.question,
+    left?.id,
+    left?.titel,
+    left?.beschreibung,
+    right?.id,
+    right?.titel,
+    right?.beschreibung,
+    speak,
+  ]);
 
   // Cycle generating messages
   useEffect(() => {
